@@ -1,0 +1,4 @@
+<resources>
+    <!-- All SmartCard devices -->
+    <usb-device class="11" />
+</resources>
