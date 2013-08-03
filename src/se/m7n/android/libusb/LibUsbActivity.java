@@ -13,6 +13,7 @@ public class LibUsbActivity extends Activity
     private static final String TAG = "LibUsb";
     private Object mDevice;
     private TextView mStatus;
+    private LibUsb mUsb;
 
     /** Called when the activity is first created. */
     @Override
@@ -22,6 +23,8 @@ public class LibUsbActivity extends Activity
 
         setContentView(R.layout.main);
         mStatus = (TextView)this.findViewById(R.id.status);
+        mUsb = new LibUsb(this);
+        mUsb.lsusb();
     }
     
     @Override
@@ -41,6 +44,12 @@ public class LibUsbActivity extends Activity
             }
         }
     }
+    
+    @Override
+    public void onPause() {
+        super.onPause();
+        mUsb = null;
+    }
 
     private void setDevice(Object object) {
         mDevice = object;
@@ -48,6 +57,7 @@ public class LibUsbActivity extends Activity
             mStatus.setText(R.string.disconnected);
         } else {
             mStatus.setText(R.string.connected);
+            mUsb.lsusb();
         }
     }
 }
