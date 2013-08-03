@@ -162,6 +162,95 @@ uint8_t libusb_get_device_address(libusb_device *dev)
 	return addr;
 }
 
+int libusb_bulk_transfer(libusb_device_handle *dev_handle,
+	unsigned char endpoint, unsigned char *data, int length,
+	int *actual_length, unsigned int timeout)
+{
+	// FIXME
+	return LIBUSB_ERROR_OTHER;
+}
+
+int libusb_reset_device(libusb_device_handle *dev)
+{
+	// FIXME
+	return LIBUSB_ERROR_OTHER;
+}
+
+int libusb_claim_interface(libusb_device_handle *dev, int iface)
+{
+	// FIXME
+	return LIBUSB_ERROR_OTHER;
+}
+
+int libusb_release_interface(libusb_device_handle *dev, int iface)
+{
+	// FIXME
+	return LIBUSB_ERROR_OTHER;
+}
+
+int libusb_control_transfer(libusb_device_handle *dev_handle,
+	uint8_t request_type, uint8_t request, uint16_t value, uint16_t index,
+	unsigned char *data, uint16_t length, unsigned int timeout)
+{
+	// FIXME
+	return LIBUSB_ERROR_OTHER;
+}
+
+int libusb_open(libusb_device *dev, libusb_device_handle **handle)
+{
+	// FIXME
+	return LIBUSB_ERROR_OTHER;
+}
+
+void libusb_close(libusb_device_handle *dev_handle)
+{
+	// FIXME
+}
+
+struct libusb_transfer *libusb_alloc_transfer(int iso_packets)
+{
+	// FIXME
+	return NULL;
+}
+
+int libusb_submit_transfer(struct libusb_transfer *transfer)
+{
+	// FIXME
+	return LIBUSB_ERROR_OTHER;
+}
+
+int libusb_cancel_transfer(struct libusb_transfer *transfer)
+{
+	// FIXME
+	return LIBUSB_ERROR_OTHER;
+}
+
+void libusb_free_transfer(struct libusb_transfer *transfer)
+{
+	// FIXME
+}
+
+int libusb_get_string_descriptor_ascii(libusb_device_handle *dev,
+	uint8_t index, unsigned char *data, int length)
+{
+	// FIXME
+	return LIBUSB_ERROR_OTHER;
+}
+
+int libusb_get_active_config_descriptor(libusb_device *dev,
+	struct libusb_config_descriptor **config)
+{
+	// FIXME
+	return LIBUSB_ERROR_OTHER;
+}
+
+int libusb_handle_events(libusb_context *ctx)
+{
+	// FIXME
+	return LIBUSB_ERROR_OTHER;
+}
+
+
 int printf(const char *format, ...)
 {
 	va_list ap;
