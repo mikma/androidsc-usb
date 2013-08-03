@@ -23,26 +23,18 @@ jclass gClsCallback;
 
 extern "C" {
 	JNIEXPORT void JNICALL Java_se_m7n_android_libusb_LibUsb_setCallback(JNIEnv * env, jobject obj, jobject callback);
-	JNIEXPORT void JNICALL Java_se_m7n_android_libusb_LibUsb_lsusb(JNIEnv * env, jobject obj, jobject callback);
-	int main(void);
 };
 
 JNIEXPORT void JNICALL Java_se_m7n_android_libusb_LibUsb_setCallback(JNIEnv * env, jobject obj, jobject callback)
 {
 	__android_log_print(ANDROID_LOG_DEBUG, TAG, "setCallback\n");
-	gCallback = env->NewLocalRef(callback);
+	gEnv = env;
+	gCallback = env->NewGlobalRef(callback);
 
 	gClsCallback = (jclass)env->NewLocalRef(env->FindClass("se/m7n/android/libusb/LibUsb$Callback"));
 	jmethodID id_manager = env->GetMethodID(gClsCallback, "getUsbManager", "()Landroid/hardware/usb/UsbManager;");
 	gManager = env->NewLocalRef(env->CallObjectMethod(gCallback, id_manager));
 	gClsManager = (jclass)env->NewLocalRef(env->FindClass("android/hardware/usb/UsbManager"));
-}
-
-JNIEXPORT void JNICALL Java_se_m7n_android_libusb_LibUsb_lsusb(JNIEnv * env, jobject obj, jobject callback)
-{
-	gEnv = env;
-	gCallback = callback;
-	main();
 }
 
 int libusb_init(libusb_context **ctx)
