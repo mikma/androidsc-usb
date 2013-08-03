@@ -67,29 +67,17 @@ ssize_t libusb_get_device_list(libusb_context *ctx,
 	jmethodID id_getdevicelist = gEnv->GetMethodID(gClsCallback, "getDeviceList", "()[Ljava/lang/Object;");
 	jobjectArray device_list = (jobjectArray)gEnv->CallObjectMethod(gCallback, id_getdevicelist);
 
-	jmethodID id_getfoo = gEnv->GetMethodID(gClsCallback, "getFoo", "()I");
-	int foo = gEnv->CallIntMethod(gCallback, id_getfoo);
-	__android_log_print(ANDROID_LOG_DEBUG, TAG, "libusb_get_device_list foo %d\n", foo);
-
 	printf("libusb_get_device_list foo %d\n", 42);
-
-	printf("libusb_get_device_list foo %04x\n", gEnv->CallIntMethod(gCallback, gEnv->GetMethodID(gClsCallback, "getFoo", "()I")));
 
 	int num = gEnv->GetArrayLength(device_list);
 	libusb_device **list_p = new libusb_device*[num+1];
 
-	printf("libusb_get_device_list %04x", gEnv->CallIntMethod(gCallback, gEnv->GetMethodID(gClsCallback, "getDevInt2", "()I")));
-
 	for (int i=0; i<num; i++) {
-		printf("libusb_get_device_list %04x", gEnv->CallIntMethod(gCallback, gEnv->GetMethodID(gClsCallback, "getDevInt2", "()I")));
 		list_p[i] = new libusb_device();
 		__android_log_print(ANDROID_LOG_DEBUG, TAG, "libusb_get_device_list %d\n", c++);
-		printf("libusb_get_device_list %04x", gEnv->CallIntMethod(gCallback, gEnv->GetMethodID(gClsCallback, "getDevInt2", "()I")));
 		//jobject obj = gEnv->NewLocalRef(gEnv->GetObjectArrayElement(device_list, i));
 		jobject obj = gEnv->GetObjectArrayElement(device_list, i);
 		if (gEnv->IsInstanceOf(obj, clsUsbDevice)) {
-			printf("libusb_get_device_list %04x", gEnv->CallIntMethod(gCallback, gEnv->GetMethodID(gClsCallback, "getDevInt2", "()I")));
-
 			jmethodID id_getvendorid = gEnv->GetMethodID(clsUsbDevice, "getVendorId", "()I");
 			jint idVendor = gEnv->CallIntMethod(obj, id_getvendorid);
 			jmethodID id_getproductid = gEnv->GetMethodID(clsUsbDevice, "getProductId", "()I");
@@ -100,15 +88,10 @@ ssize_t libusb_get_device_list(libusb_context *ctx,
 			jint bDeviceSubClass= gEnv->CallIntMethod(obj, id_getsubclass);
 			jmethodID id_getdevname = gEnv->GetMethodID(clsUsbDevice, "getDeviceName", "()Ljava/lang/String;");
 			jstring devName = (jstring)gEnv->CallObjectMethod(obj, id_getdevname);
-			jmethodID id_getdevint = gEnv->GetMethodID(gClsCallback, "getDevInt", "(Landroid/hardware/usb/UsbDevice;)I");
-			jint product = gEnv->CallIntMethod(gCallback, id_getdevint, obj);
-			printf("libusb_get_device_list %04x", product);
-			jmethodID id_getdevint2 = gEnv->GetMethodID(gClsCallback, "getDevInt2", "()I");
-			printf("libusb_get_device_list %04x", gEnv->CallIntMethod(gCallback, id_getdevint2));
 			unsigned char isCopy = false;
 			const char *utf8 = gEnv->GetStringUTFChars(devName, &isCopy);
 
-			printf("libusb_get_device_list %04x %04x:%04x %d %d '%s'", product, idVendor, idProduct, bDeviceClass, bDeviceSubClass, utf8);
+			printf("libusb_get_device_list %04x:%04x %d %d '%s'", idVendor, idProduct, bDeviceClass, bDeviceSubClass, utf8);
 			gEnv->ReleaseStringUTFChars(devName, utf8);
 			list_p[i]->obj = gEnv->NewLocalRef(obj);
 		} else {

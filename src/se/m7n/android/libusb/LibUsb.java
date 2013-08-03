@@ -1,6 +1,5 @@
 package se.m7n.android.libusb;
 
-import se.m7n.android.libusb.LibUsb.Callback;
 import android.content.Context;
 import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbManager;
@@ -24,17 +23,6 @@ public class LibUsb {
     public class Callback {
         public UsbManager getUsbManager() {
             return (UsbManager) mContext.getSystemService(Context.USB_SERVICE);
-        }
-        public int getFoo() { return 17; }
-        public int getDevInt(UsbDevice dev) {
-            //int id = dev.getProductId();
-            int id = 18;
-            Log.d(TAG, "getDevInt: " + dev + " " + dev.hashCode() + " " + dev.getVendorId() + ":" + id + " " + dev.getDeviceId() + " " + dev.getDeviceName());
-            return id;
-        }
-        public int getDevInt2() {
-            int id = 18;
-            return id;
         }
         public Object[] getDeviceList() {
             Log.d(TAG, "getDeviceList");
