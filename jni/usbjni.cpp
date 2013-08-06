@@ -428,14 +428,14 @@ int libusb_get_active_config_descriptor(libusb_device *dev,
 	printf("libusb_get_active_config_descriptor %d", config_p->bNumInterfaces);
 
 	libusb_interface *interfaces = new libusb_interface[config_p->bNumInterfaces];
-	memset(interfaces, 0, sizeof(*interfaces));
+	memset(interfaces, 0, sizeof(*interfaces) * config_p->bNumInterfaces);
 
 	config_p->interface = interfaces;
 
 	for (int i=0; i < config_p->bNumInterfaces; i++) {
 		interfaces[i].num_altsetting = 1;
 		libusb_interface_descriptor *desc = new libusb_interface_descriptor[1];
-		memset(desc, 0, sizeof(*desc));
+		memset(desc, 0, sizeof(*desc) * 1);
 
 		interfaces[i].altsetting = desc;
 
@@ -449,9 +449,27 @@ int libusb_get_active_config_descriptor(libusb_device *dev,
 		}
 		// FIXME interface number
 		desc->bInterfaceNumber = 0;
+
+		// Write endpoints
+		desc->bNumEndpoints = env->CallIntMethod(interface, gid_getendpointcount);
+
+		libusb_endpoint_descriptor *endpoints = new libusb_endpoint_descriptor[desc->bNumEndpoints];
+		memset(endpoints, 0, sizeof(*endpoints) * desc->bNumEndpoints);
+
+		for (int j=0; j < desc->bNumEndpoints; j++) {
+			jobject endpoint = env->CallObjectMethod(interface, gid_getendpoint, j);
+
+			endpoints[j].bDescriptorType = LIBUSB_DT_ENDPOINT;
+			endpoints[j].bLength = sizeof(endpoints[j]);
+			endpoints[j].bEndpointAddress = env->CallIntMethod(endpoint, gid_getaddress);
+			endpoints[j].bmAttributes = env->CallIntMethod(endpoint, gid_getattributes);
+			endpoints[j].wMaxPacketSize = env->CallIntMethod(endpoint, gid_getmaxpacketsize);
+			endpoints[j].bInterval = env->CallIntMethod(endpoint, gid_interval);
+		}
+
 		desc->extra_length = 54;
 		unsigned char *extra = new unsigned char[desc->extra_length];
-		memset(extra, 0, sizeof(*extra));
+		memset(extra, 0, desc->extra_length);
 
 		desc->extra = extra;
 
