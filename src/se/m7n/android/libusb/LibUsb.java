@@ -9,6 +9,10 @@ public class LibUsb {
     public final static String TAG = "LibUsb";
 
     static {
+        System.loadLibrary("ccid");
+        System.loadLibrary("pcscd");
+        System.loadLibrary("pcsclite");
+        System.loadLibrary("scardcontrol");
         System.loadLibrary("usbjni");
     }
     private Context mContext;
@@ -40,10 +44,19 @@ public class LibUsb {
         }
     };
     
-    public void lsusb() {
-        lsusb(mCallback);
+    public void pcscmain() {
+        new Thread(new Runnable() {
+            public void run() {
+                pcscmain(mCallback);                
+            }
+        }).start();
     }
     
+    public void lsusb() {
+        lsusb(mCallback);                
+    }
+
     native private void lsusb(Callback callback); 
+    native private void pcscmain(Callback callback); 
     native private void setCallback(Callback callback); 
 }

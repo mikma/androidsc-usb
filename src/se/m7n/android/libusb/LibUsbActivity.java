@@ -5,15 +5,19 @@ import android.content.Intent;
 import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbManager;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
 import android.util.Log;
 import android.widget.TextView;
 
 public class LibUsbActivity extends Activity
 {
     private static final String TAG = "LibUsb";
+    protected static final int HANDLER_LSUSB = 1;
     private Object mDevice;
     private TextView mStatus;
     private LibUsb mUsb;
+    private Handler mHandler;
 
     /** Called when the activity is first created. */
     @Override
@@ -24,7 +28,21 @@ public class LibUsbActivity extends Activity
         setContentView(R.layout.main);
         mStatus = (TextView)this.findViewById(R.id.status);
         mUsb = new LibUsb(this);
-        mUsb.lsusb();
+        mUsb.pcscmain();
+        
+        mHandler = new Handler(){
+            @Override
+            public void handleMessage(Message msg) {
+                    switch (msg.what) {
+                    case HANDLER_LSUSB:
+                        mUsb.lsusb();
+                        break;
+                    }
+            }
+        };
+        Message msg = mHandler.obtainMessage(HANDLER_LSUSB);
+        // Allow pcscd to startup
+        mHandler.sendMessageDelayed(msg, 1000);
     }
     
     @Override

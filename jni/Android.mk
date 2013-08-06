@@ -10,13 +10,13 @@ include $(CLEAR_VARS)
 
 LOCAL_MODULE    := usbjni
 LOCAL_CFLAGS	:= -I$(LOCAL_PATH)
-LOCAL_SRC_FILES := main_jni.cpp lsusb.c
+LOCAL_SRC_FILES := main_jni.cpp
 LOCAL_LDLIBS	:= -llog
-LOCAL_STATIC_LIBRARIES := libusb
 #LOCAL_PRELINK_MODULE := false
-#LOCAL_SHARED_LIBRARIES := libusb libccid
+LOCAL_SHARED_LIBRARIES := pcscd libscardcontrol
+LOCAL_SHARED_LIBRARIES += libusb
 
 include $(BUILD_SHARED_LIBRARY)
 
-#include $(LOCAL_PATH)/ccid/Android.mk
-#include libusb/Android.mk
+$(call import-module,ccid)
+$(call import-module,pcsc-lite)
