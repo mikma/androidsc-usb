@@ -30,6 +30,9 @@ jclass gClsManager;
 jclass gClsConnection;
 jclass gClsInterface;
 jclass gClsEndpoint;
+jclass gClsRequest;
+jclass gClsLong;
+jclass gClsByteBuffer;
 
 jmethodID gid_getdevicelist;
 jmethodID gid_getvendorid;
@@ -62,6 +65,22 @@ jmethodID gid_releaseinterface;
 jmethodID gid_controltransfer;
 jmethodID gid_bulktransfer;
 
+// UsbRequest
+jmethodID gid_newrequest;
+jmethodID gid_setclientdata;
+jmethodID gid_getclientdata;
+jmethodID gid_initialize;
+jmethodID gid_queue;
+
+// Long
+jmethodID gid_newlong;
+jmethodID gid_longvalue;
+
+// ByteBuffer
+jmethodID gid_allocate;
+jmethodID gid_put;
+jmethodID gid_rewind;
+
 extern "C" {
 	JNIEXPORT void JNICALL Java_se_m7n_android_libusb_LibUsb_setCallback(JNIEnv * env, jobject obj, jobject callback);
 };
@@ -79,6 +98,9 @@ JNIEXPORT void JNICALL Java_se_m7n_android_libusb_LibUsb_setCallback(JNIEnv * en
 	gClsInterface = (jclass)env->NewGlobalRef(env->FindClass("android/hardware/usb/UsbInterface"));
 	gClsConnection = (jclass)env->NewGlobalRef(env->FindClass("android/hardware/usb/UsbDeviceConnection"));
 	gClsEndpoint = (jclass)env->NewGlobalRef(env->FindClass("android/hardware/usb/UsbEndpoint"));
+	gClsRequest = (jclass)env->NewGlobalRef(env->FindClass("android/hardware/usb/UsbRequest"));
+	gClsLong = (jclass)env->NewGlobalRef(env->FindClass("java/lang/Long"));
+	gClsByteBuffer = (jclass)env->NewGlobalRef(env->FindClass("java/nio/ByteBuffer"));
 
 	gid_getdevicelist = env->GetMethodID(gClsCallback, "getDeviceList", "()[Ljava/lang/Object;");
 
@@ -115,6 +137,22 @@ JNIEXPORT void JNICALL Java_se_m7n_android_libusb_LibUsb_setCallback(JNIEnv * en
 	gid_getattributes = env->GetMethodID(gClsEndpoint, "getAttributes", "()I");;
 	gid_getmaxpacketsize = env->GetMethodID(gClsEndpoint, "getMaxPacketSize", "()I");;
 	gid_interval = env->GetMethodID(gClsEndpoint, "getInterval", "()I");;
+
+	// UsbRequest
+	gid_newrequest = env->GetMethodID(gClsRequest, "<init>", "()V");
+	gid_setclientdata = env->GetMethodID(gClsRequest, "setClientData", "(Ljava/lang/Object;)V");
+	gid_getclientdata = env->GetMethodID(gClsRequest, "getClientData", "()Ljava/lang/Object;");
+	gid_queue = env->GetMethodID(gClsRequest, "queue", "(Ljava/nio/ByteBuffer;I)Z");
+	gid_initialize = env->GetMethodID(gClsRequest, "initialize", "(Landroid/hardware/usb/UsbDeviceConnection;Landroid/hardware/usb/UsbEndpoint;)Z");
+
+	// Long
+	gid_newlong = env->GetMethodID(gClsLong, "<init>", "(J)V");
+	gid_longvalue = env->GetMethodID(gClsLong, "longValue", "()J");
+
+	// ByteBuffer
+	gid_allocate = env->GetStaticMethodID(gClsByteBuffer, "allocate", "(I)Ljava/nio/ByteBuffer;");
+	gid_put = env->GetMethodID(gClsByteBuffer, "put", "([B)Ljava/nio/ByteBuffer;");
+	gid_rewind = env->GetMethodID(gClsByteBuffer, "rewind", "()Ljava/nio/Buffer;");
 }
 
 int libusb_init(libusb_context **ctx)
