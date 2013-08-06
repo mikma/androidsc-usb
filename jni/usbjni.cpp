@@ -64,6 +64,7 @@ jmethodID gid_claiminterface;
 jmethodID gid_releaseinterface;
 jmethodID gid_controltransfer;
 jmethodID gid_bulktransfer;
+jmethodID gid_requestwait;
 
 // UsbRequest
 jmethodID gid_newrequest;
@@ -80,6 +81,9 @@ jmethodID gid_longvalue;
 jmethodID gid_allocate;
 jmethodID gid_put;
 jmethodID gid_rewind;
+jmethodID gid_limit;
+jmethodID gid_position;
+jmethodID gid_capacity;
 
 extern "C" {
 	JNIEXPORT void JNICALL Java_se_m7n_android_libusb_LibUsb_setCallback(JNIEnv * env, jobject obj, jobject callback);
@@ -126,6 +130,7 @@ JNIEXPORT void JNICALL Java_se_m7n_android_libusb_LibUsb_setCallback(JNIEnv * en
 	gid_releaseinterface = env->GetMethodID(gClsConnection, "releaseInterface", "(Landroid/hardware/usb/UsbInterface;)Z");
 	gid_controltransfer = env->GetMethodID(gClsConnection, "controlTransfer", "(IIII[BII)I");
 	gid_bulktransfer = env->GetMethodID(gClsConnection, "bulkTransfer", "(Landroid/hardware/usb/UsbEndpoint;[BIII)I");
+	gid_requestwait = env->GetMethodID(gClsConnection, "requestWait", "()Landroid/hardware/usb/UsbRequest;");
 
 	// UsbInterface
 	gid_getinterfaceclass = env->GetMethodID(gClsInterface, "getInterfaceClass", "()I");
@@ -153,6 +158,9 @@ JNIEXPORT void JNICALL Java_se_m7n_android_libusb_LibUsb_setCallback(JNIEnv * en
 	gid_allocate = env->GetStaticMethodID(gClsByteBuffer, "allocate", "(I)Ljava/nio/ByteBuffer;");
 	gid_put = env->GetMethodID(gClsByteBuffer, "put", "([B)Ljava/nio/ByteBuffer;");
 	gid_rewind = env->GetMethodID(gClsByteBuffer, "rewind", "()Ljava/nio/Buffer;");
+	gid_limit = env->GetMethodID(gClsByteBuffer, "limit", "()I");
+	gid_position = env->GetMethodID(gClsByteBuffer, "position", "()I");
+	gid_capacity = env->GetMethodID(gClsByteBuffer, "capacity", "()I");
 }
 
 int libusb_init(libusb_context **ctx)
