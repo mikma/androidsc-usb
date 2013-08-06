@@ -9,6 +9,7 @@ public class LibUsb {
     public final static String TAG = "LibUsb";
 
     static {
+        System.loadLibrary("usb");
         System.loadLibrary("ccid");
         System.loadLibrary("pcscd");
         System.loadLibrary("pcsclite");
