@@ -27,6 +27,7 @@ jclass gClsCallback;
 jclass gClsUsbDevice;
 jclass gClsManager;
 jclass gClsConnection;
+jclass gClsInterface;
 
 jmethodID gid_getdevicelist;
 jmethodID gid_getvendorid;
@@ -36,6 +37,10 @@ jmethodID gid_getsubclass;
 jmethodID gid_getdevname;
 jmethodID gid_getdeviceid;
 jmethodID gid_getinterfacecount;
+jmethodID gid_getinterface;
+
+// UsbInterface
+jmethodID gid_getinterfaceclass;
 
 // UsbManager
 jmethodID gid_opendevice;
@@ -56,7 +61,19 @@ JNIEXPORT void JNICALL Java_se_m7n_android_libusb_LibUsb_setCallback(JNIEnv * en
 
 	gClsCallback = (jclass)env->NewGlobalRef(env->FindClass("se/m7n/android/libusb/LibUsb$Callback"));
 	gClsUsbDevice = (jclass)env->NewGlobalRef(env->FindClass("android/hardware/usb/UsbDevice"));
+	gClsManager = (jclass)env->NewGlobalRef(env->FindClass("android/hardware/usb/UsbManager"));
+	gClsInterface = (jclass)env->NewGlobalRef(env->FindClass("android/hardware/usb/UsbInterface"));
+	gClsConnection = (jclass)env->NewGlobalRef(env->FindClass("android/hardware/usb/UsbDeviceConnection"));
+
 	gid_getdevicelist = env->GetMethodID(gClsCallback, "getDeviceList", "()[Ljava/lang/Object;");
+
+	jmethodID id_manager = env->GetMethodID(gClsCallback, "getUsbManager", "()Landroid/hardware/usb/UsbManager;");
+	gManager = env->NewGlobalRef(env->CallObjectMethod(gCallback, id_manager));
+
+	// UsbManager
+	gid_opendevice = env->GetMethodID(gClsManager, "openDevice", "(Landroid/hardware/usb/UsbDevice;)Landroid/hardware/usb/UsbDeviceConnection;");
+
+	// UsbDevice
 	gid_getvendorid = env->GetMethodID(gClsUsbDevice, "getVendorId", "()I");
 	gid_getproductid = env->GetMethodID(gClsUsbDevice, "getProductId", "()I");
 	gid_getclass = env->GetMethodID(gClsUsbDevice, "getDeviceClass", "()I");
@@ -64,14 +81,13 @@ JNIEXPORT void JNICALL Java_se_m7n_android_libusb_LibUsb_setCallback(JNIEnv * en
 	gid_getdevname = env->GetMethodID(gClsUsbDevice, "getDeviceName", "()Ljava/lang/String;");
 	gid_getdeviceid = env->GetMethodID(gClsUsbDevice, "getDeviceId", "()I");
 	gid_getinterfacecount = env->GetMethodID(gClsUsbDevice, "getInterfaceCount", "()I");
+	gid_getinterface = env->GetMethodID(gClsUsbDevice, "getInterface", "(I)Landroid/hardware/usb/UsbInterface;");
 
-	jmethodID id_manager = env->GetMethodID(gClsCallback, "getUsbManager", "()Landroid/hardware/usb/UsbManager;");
-	gManager = env->NewGlobalRef(env->CallObjectMethod(gCallback, id_manager));
-	gClsManager = (jclass)env->NewGlobalRef(env->FindClass("android/hardware/usb/UsbManager"));
-	gid_opendevice = env->GetMethodID(gClsManager, "openDevice", "(Landroid/hardware/usb/UsbDevice;)Landroid/hardware/usb/UsbDeviceConnection;");
-
-	gClsConnection = (jclass)env->NewGlobalRef(env->FindClass("android/hardware/usb/UsbDeviceConnection"));
+	// UsbConnection
 	gid_connclose = env->GetMethodID(gClsConnection, "close", "()V");
+
+	// UsbInterface
+	gid_getinterfaceclass = env->GetMethodID(gClsInterface, "getInterfaceClass", "()I");
 }
 
 int libusb_init(libusb_context **ctx)
