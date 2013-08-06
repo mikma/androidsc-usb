@@ -329,6 +329,31 @@ int libusb_get_active_config_descriptor(libusb_device *dev,
 	config_p->bNumInterfaces = env->CallIntMethod(obj, gid_getinterfacecount);
 
 	printf("libusb_get_active_config_descriptor %d", config_p->bNumInterfaces);
+
+	libusb_interface *interfaces = new libusb_interface[config_p->bNumInterfaces];
+	memset(interfaces, 0, sizeof(*interfaces));
+
+	config_p->interface = interfaces;
+
+	for (int i=0; i < config_p->bNumInterfaces; i++) {
+		interfaces[i].num_altsetting = 1;
+		libusb_interface_descriptor *desc = new libusb_interface_descriptor[1];
+		memset(desc, 0, sizeof(*desc));
+
+		interfaces[i].altsetting = desc;
+
+                desc->bLength = sizeof(*desc);
+
+		jobject interface = env->CallObjectMethod(obj, gid_getinterface, i);
+		printf("libusb_get_active_config_descriptor %p", interface);
+
+		if (interface) {
+			desc->bInterfaceClass = env->CallIntMethod(interface, gid_getinterfaceclass);
+		}
+		// FIXME interface number
+		desc->bInterfaceNumber = 0;
+	}
+
 	// TODO more entries
 
 	*config = config_p;
