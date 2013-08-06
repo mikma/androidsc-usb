@@ -1,8 +1,10 @@
-LOCAL_PATH := $(call my-dir)
 
-include $(CLEAR_VARS)
+PCSCD_PATH := /data/data/se.m7n.android.libusb/files
 
+JNI_PATH := $(call my-dir)
+PCSC_PATH:=$(JNI_PATH)/pcsc-lite
 
+LOCAL_PATH := $(JNI_PATH)
 
 include $(CLEAR_VARS)
 
