@@ -310,6 +310,23 @@ int libusb_get_string_descriptor_ascii(libusb_device_handle *dev,
 	return LIBUSB_ERROR_OTHER;
 }
 
+static void ccid_setb(unsigned char *buf, int index, unsigned char value)
+{
+	buf[index] = value;
+}
+
+static void ccid_setw(unsigned char *buf, int index, unsigned short value)
+{
+	ccid_setb(buf, index, value & 255);
+	ccid_setb(buf, index + 1, (value >> 8) & 255);
+}
+
+static void ccid_setdw(unsigned char *buf, int index, unsigned int value)
+{
+	ccid_setw(buf, index, value & 65535);
+	ccid_setw(buf, index + 2, (value >> 16) & 65535);
+}
+
 int libusb_get_active_config_descriptor(libusb_device *dev,
 	struct libusb_config_descriptor **config)
 {
@@ -352,6 +369,30 @@ int libusb_get_active_config_descriptor(libusb_device *dev,
 		}
 		// FIXME interface number
 		desc->bInterfaceNumber = 0;
+		desc->extra_length = 54;
+		unsigned char *extra = new unsigned char[desc->extra_length];
+		memset(extra, 0, sizeof(*extra));
+
+		desc->extra = extra;
+
+		// dwFeatures
+		ccid_setdw(extra, 40, 0x00010230);
+		// wLcdLayout
+		ccid_setw(extra, 50, 0);
+		// bPINSupport
+		ccid_setb(extra, 52, 0);
+		// dwMaxCCIDMessageLength
+		ccid_setdw(extra, 44, 271);
+		// dwMaxIFSD
+		ccid_setdw(extra, 28, 254);
+		// dwDefaultClock
+		ccid_setdw(extra, 10, 4000);
+		// dwMaxDataRate
+		ccid_setdw(extra, 23, 344086);
+		// bMaxSlotIndex
+		ccid_setb(extra, 4, 0);
+		// bVoltageSupport
+		ccid_setb(extra, 5, 7);
 	}
 
 	// TODO more entries
