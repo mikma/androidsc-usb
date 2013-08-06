@@ -317,8 +317,8 @@ int libusb_control_transfer(libusb_device_handle *handle,
 
 	jint res = env->CallIntMethod(handle->conn, gid_controltransfer, request_type, request, value, index, buffer, length, timeout);
 
-	if ((request_type & LIBUSB_ENDPOINT_DIR_MASK) == LIBUSB_ENDPOINT_IN)
-		env->GetByteArrayRegion(buffer, 0, length, (jbyte*)data);
+	if ((res > 0) && (request_type & LIBUSB_ENDPOINT_DIR_MASK) == LIBUSB_ENDPOINT_IN)
+		env->GetByteArrayRegion(buffer, 0, res, (jbyte*)data);
 
 	env->DeleteLocalRef(buffer); buffer = NULL;
 
