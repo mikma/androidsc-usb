@@ -42,14 +42,15 @@ jmethodID gid_getinterface;
 
 // UsbInterface
 jmethodID gid_getinterfaceclass;
-jmethodID gid_claiminterface;
-jmethodID gid_releaseinterface;
 
 // UsbManager
 jmethodID gid_opendevice;
 
 // UsbDeviceConnection
 jmethodID gid_connclose;
+jmethodID gid_claiminterface;
+jmethodID gid_releaseinterface;
+jmethodID gid_controltransfer;
 
 extern "C" {
 	JNIEXPORT void JNICALL Java_se_m7n_android_libusb_LibUsb_setCallback(JNIEnv * env, jobject obj, jobject callback);
@@ -90,6 +91,7 @@ JNIEXPORT void JNICALL Java_se_m7n_android_libusb_LibUsb_setCallback(JNIEnv * en
 	gid_connclose = env->GetMethodID(gClsConnection, "close", "()V");
 	gid_claiminterface = env->GetMethodID(gClsConnection, "claimInterface", "(Landroid/hardware/usb/UsbInterface;Z)Z");
 	gid_releaseinterface = env->GetMethodID(gClsConnection, "releaseInterface", "(Landroid/hardware/usb/UsbInterface;)Z");
+	gid_controltransfer = env->GetMethodID(gClsConnection, "controlTransfer", "(IIII[BII)I");
 
 	// UsbInterface
 	gid_getinterfaceclass = env->GetMethodID(gClsInterface, "getInterfaceClass", "()I");
@@ -278,12 +280,30 @@ int libusb_release_interface(libusb_device_handle *handle, int iface)
 	return LIBUSB_SUCCESS;
 }
 
-int libusb_control_transfer(libusb_device_handle *dev_handle,
+int libusb_control_transfer(libusb_device_handle *handle,
 	uint8_t request_type, uint8_t request, uint16_t value, uint16_t index,
 	unsigned char *data, uint16_t length, unsigned int timeout)
 {
-	// FIXME
-	return LIBUSB_ERROR_OTHER;
+	if (handle == NULL)
+		return LIBUSB_ERROR_INVALID_PARAM;
+
+	JNIEnv *env=NULL;
+	gVM->AttachCurrentThread(&env, NULL);
+
+	jbyteArray buffer = env->NewByteArray(length);
+
+	if ((request_type & LIBUSB_ENDPOINT_DIR_MASK) == LIBUSB_ENDPOINT_OUT)
+		env->SetByteArrayRegion(buffer, 0, length, (const jbyte*)data);
+
+	jint res = env->CallIntMethod(handle->conn, gid_controltransfer, request_type, request, value, index, buffer, length, timeout);
+
+	if ((request_type & LIBUSB_ENDPOINT_DIR_MASK) == LIBUSB_ENDPOINT_IN)
+		env->GetByteArrayRegion(buffer, 0, length, (jbyte*)data);
+
+	env->DeleteLocalRef(buffer); buffer = NULL;
+
+	// TODO translate negative error?
+	return res;
 }
 
 int libusb_open(libusb_device *dev, libusb_device_handle **handle)
