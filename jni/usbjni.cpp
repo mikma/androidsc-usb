@@ -26,6 +26,7 @@ jmethodID gid_getclass;
 jmethodID gid_getsubclass;
 jmethodID gid_getdevname;
 jmethodID gid_getdeviceid;
+jmethodID gid_getinterfacecount;
 
 extern "C" {
 	JNIEXPORT void JNICALL Java_se_m7n_android_libusb_LibUsb_setCallback(JNIEnv * env, jobject obj, jobject callback);
@@ -47,6 +48,7 @@ JNIEXPORT void JNICALL Java_se_m7n_android_libusb_LibUsb_setCallback(JNIEnv * en
 	gid_getsubclass = env->GetMethodID(gClsUsbDevice, "getDeviceSubclass", "()I");
 	gid_getdevname = env->GetMethodID(gClsUsbDevice, "getDeviceName", "()Ljava/lang/String;");
 	gid_getdeviceid = env->GetMethodID(gClsUsbDevice, "getDeviceId", "()I");
+	gid_getinterfacecount = env->GetMethodID(gClsUsbDevice, "getInterfaceCount", "()I");
 }
 
 int libusb_init(libusb_context **ctx)
@@ -253,7 +255,25 @@ int libusb_get_active_config_descriptor(libusb_device *dev,
 	struct libusb_config_descriptor **config)
 {
 	// FIXME
-	return LIBUSB_ERROR_OTHER;
+	if (dev == NULL || config == NULL)
+		return LIBUSB_ERROR_INVALID_PARAM;
+
+	struct libusb_config_descriptor *config_p = new libusb_config_descriptor;
+
+	memset(config_p, 0, sizeof(*config_p));
+	config_p->bLength = sizeof(*config_p);
+
+	JNIEnv *env=NULL;
+	gVM->AttachCurrentThread(&env, NULL);
+
+	jobject obj = dev->obj;
+	config_p->bNumInterfaces = env->CallIntMethod(obj, gid_getinterfacecount);
+
+	printf("libusb_get_active_config_descriptor %d", config_p->bNumInterfaces);
+	// TODO more entries
+
+        *config = config_p;
+	return LIBUSB_SUCCESS;
 }
 
 int libusb_handle_events(libusb_context *ctx)
@@ -264,7 +284,7 @@ int libusb_handle_events(libusb_context *ctx)
 
 void libusb_free_config_descriptor(struct libusb_config_descriptor *config)
 {
-	// FIXME
+	delete config;
 }
 
 
