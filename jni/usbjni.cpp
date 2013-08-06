@@ -14,11 +14,20 @@ struct libusb_device {
 	jobject obj;
 };
 
+struct libusb_device_handle {
+	jobject conn;
+};
+
 libusb_context gContext;
 JavaVM* gVM;
 jobject gCallback;
+jobject gManager;
+
 jclass gClsCallback;
 jclass gClsUsbDevice;
+jclass gClsManager;
+jclass gClsConnection;
+
 jmethodID gid_getdevicelist;
 jmethodID gid_getvendorid;
 jmethodID gid_getproductid;
@@ -27,6 +36,12 @@ jmethodID gid_getsubclass;
 jmethodID gid_getdevname;
 jmethodID gid_getdeviceid;
 jmethodID gid_getinterfacecount;
+
+// UsbManager
+jmethodID gid_opendevice;
+
+// UsbDeviceConnection
+jmethodID gid_connclose;
 
 extern "C" {
 	JNIEXPORT void JNICALL Java_se_m7n_android_libusb_LibUsb_setCallback(JNIEnv * env, jobject obj, jobject callback);
@@ -49,6 +64,14 @@ JNIEXPORT void JNICALL Java_se_m7n_android_libusb_LibUsb_setCallback(JNIEnv * en
 	gid_getdevname = env->GetMethodID(gClsUsbDevice, "getDeviceName", "()Ljava/lang/String;");
 	gid_getdeviceid = env->GetMethodID(gClsUsbDevice, "getDeviceId", "()I");
 	gid_getinterfacecount = env->GetMethodID(gClsUsbDevice, "getInterfaceCount", "()I");
+
+	jmethodID id_manager = env->GetMethodID(gClsCallback, "getUsbManager", "()Landroid/hardware/usb/UsbManager;");
+	gManager = env->NewGlobalRef(env->CallObjectMethod(gCallback, id_manager));
+	gClsManager = (jclass)env->NewGlobalRef(env->FindClass("android/hardware/usb/UsbManager"));
+	gid_opendevice = env->GetMethodID(gClsManager, "openDevice", "(Landroid/hardware/usb/UsbDevice;)Landroid/hardware/usb/UsbDeviceConnection;");
+
+	gClsConnection = (jclass)env->NewGlobalRef(env->FindClass("android/hardware/usb/UsbDeviceConnection"));
+	gid_connclose = env->GetMethodID(gClsConnection, "close", "()V");
 }
 
 int libusb_init(libusb_context **ctx)
@@ -212,13 +235,30 @@ int libusb_control_transfer(libusb_device_handle *dev_handle,
 
 int libusb_open(libusb_device *dev, libusb_device_handle **handle)
 {
-	// FIXME
-	return LIBUSB_ERROR_OTHER;
+	if (dev == NULL || handle == NULL)
+		return LIBUSB_ERROR_INVALID_PARAM;
+
+	JNIEnv *env=NULL;
+	gVM->AttachCurrentThread(&env, NULL);
+
+	libusb_device_handle *handle_p = new libusb_device_handle;
+
+	handle_p->conn = env->CallObjectMethod(gManager, gid_opendevice, dev->obj);
+
+	// FIXME check return values/exceptions
+
+	return LIBUSB_SUCCESS;
 }
 
-void libusb_close(libusb_device_handle *dev_handle)
+void libusb_close(libusb_device_handle *handle)
 {
-	// FIXME
+	if (handle == NULL)
+		return;
+
+	JNIEnv *env=NULL;
+	gVM->AttachCurrentThread(&env, NULL);
+
+	env->CallObjectMethod(handle->conn, gid_connclose);
 }
 
 struct libusb_transfer *libusb_alloc_transfer(int iso_packets)
@@ -272,7 +312,7 @@ int libusb_get_active_config_descriptor(libusb_device *dev,
 	printf("libusb_get_active_config_descriptor %d", config_p->bNumInterfaces);
 	// TODO more entries
 
-        *config = config_p;
+	*config = config_p;
 	return LIBUSB_SUCCESS;
 }
 
