@@ -118,9 +118,11 @@ ssize_t libusb_get_device_list(libusb_context *ctx,
 
 	int num = env->GetArrayLength(device_list);
 	libusb_device **list_p = new libusb_device*[num+1];
+	memset(list_p, 0, sizeof(*list_p));
 
 	for (int i=0; i<num; i++) {
 		list_p[i] = new libusb_device();
+		memset(list_p[i], 0, sizeof(*list_p[i]));
 		__android_log_print(ANDROID_LOG_DEBUG, TAG, "libusb_get_device_list %d\n", c++);
 		//jobject obj = env->NewLocalRef(env->GetObjectArrayElement(device_list, i));
 		jobject obj = env->GetObjectArrayElement(device_list, i);
@@ -258,6 +260,7 @@ int libusb_open(libusb_device *dev, libusb_device_handle **handle)
 	gVM->AttachCurrentThread(&env, NULL);
 
 	libusb_device_handle *handle_p = new libusb_device_handle;
+	memset(handle_p, 0, sizeof(*handle_p));
 
 	handle_p->conn = env->CallObjectMethod(gManager, gid_opendevice, dev->obj);
 
@@ -315,8 +318,8 @@ int libusb_get_active_config_descriptor(libusb_device *dev,
 		return LIBUSB_ERROR_INVALID_PARAM;
 
 	struct libusb_config_descriptor *config_p = new libusb_config_descriptor;
-
 	memset(config_p, 0, sizeof(*config_p));
+
 	config_p->bLength = sizeof(*config_p);
 
 	JNIEnv *env=NULL;
