@@ -29,6 +29,10 @@ jclass gClsRequest;
 jclass gClsLong;
 jclass gClsByteBuffer;
 
+// Callback
+jmethodID gid_findendpoint;
+
+// UsbDevice
 jmethodID gid_getdevicelist;
 jmethodID gid_getvendorid;
 jmethodID gid_getproductid;
@@ -74,6 +78,7 @@ jmethodID gid_longvalue;
 
 // ByteBuffer
 jmethodID gid_allocate;
+jmethodID gid_allocatedirect;
 jmethodID gid_put;
 jmethodID gid_rewind;
 jmethodID gid_limit;
@@ -106,6 +111,9 @@ JNIEXPORT void JNICALL Java_se_m7n_android_libusb_LibUsb_setCallback(JNIEnv * en
 	jmethodID id_manager = env->GetMethodID(clsCallback, "getUsbManager", "()Landroid/hardware/usb/UsbManager;");
 	gManager = env->NewGlobalRef(env->CallObjectMethod(gCallback, id_manager));
 
+	// Callback
+	gid_findendpoint = env->GetMethodID(clsCallback, "findEndpoint", "(Landroid/hardware/usb/UsbDevice;I)Landroid/hardware/usb/UsbEndpoint;");
+
 	// UsbManager
 	gid_opendevice = env->GetMethodID(clsManager, "openDevice", "(Landroid/hardware/usb/UsbDevice;)Landroid/hardware/usb/UsbDeviceConnection;");
 
@@ -124,7 +132,7 @@ JNIEXPORT void JNICALL Java_se_m7n_android_libusb_LibUsb_setCallback(JNIEnv * en
 	gid_claiminterface = env->GetMethodID(clsConnection, "claimInterface", "(Landroid/hardware/usb/UsbInterface;Z)Z");
 	gid_releaseinterface = env->GetMethodID(clsConnection, "releaseInterface", "(Landroid/hardware/usb/UsbInterface;)Z");
 	gid_controltransfer = env->GetMethodID(clsConnection, "controlTransfer", "(IIII[BII)I");
-	gid_bulktransfer = env->GetMethodID(clsConnection, "bulkTransfer", "(Landroid/hardware/usb/UsbEndpoint;[BIII)I");
+	gid_bulktransfer = env->GetMethodID(clsConnection, "bulkTransfer", "(Landroid/hardware/usb/UsbEndpoint;[BII)I");
 	gid_requestwait = env->GetMethodID(clsConnection, "requestWait", "()Landroid/hardware/usb/UsbRequest;");
 
 	// UsbInterface
@@ -151,6 +159,7 @@ JNIEXPORT void JNICALL Java_se_m7n_android_libusb_LibUsb_setCallback(JNIEnv * en
 
 	// ByteBuffer
 	gid_allocate = env->GetStaticMethodID(gClsByteBuffer, "allocate", "(I)Ljava/nio/ByteBuffer;");
+	gid_allocatedirect = env->GetStaticMethodID(gClsByteBuffer, "allocateDirect", "(I)Ljava/nio/ByteBuffer;");
 	gid_put = env->GetMethodID(gClsByteBuffer, "put", "([B)Ljava/nio/ByteBuffer;");
 	gid_rewind = env->GetMethodID(gClsByteBuffer, "rewind", "()Ljava/nio/Buffer;");
 	gid_limit = env->GetMethodID(gClsByteBuffer, "limit", "()I");
