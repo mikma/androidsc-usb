@@ -250,6 +250,11 @@ int libusb_handle_events(libusb_context *ctx)
 	return LIBUSB_ERROR_OTHER;
 }
 
+void libusb_free_config_descriptor(struct libusb_config_descriptor *config)
+{
+	// FIXME
+}
+
 
 int printf(const char *format, ...)
 {

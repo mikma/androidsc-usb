@@ -1,0 +1,17 @@
+LOCAL_PATH := $(call my-dir)
+
+include $(CLEAR_VARS)
+
+LOCAL_MODULE    := libusb
+#LOCAL_CFLAGS	:= -I$(LOCAL_PATH)
+LOCAL_SRC_FILES := ../usbjni.cpp
+LOCAL_LDLIBS	:= -llog
+#LOCAL_PRELINK_MODULE := false
+
+LOCAL_EXPORT_C_INCLUDES := \
+	$(LOCAL_PATH) \
+	$(LOCAL_PATH)/libusb
+
+LOCAL_EXPORT_LDLIBS :=
+
+include $(BUILD_SHARED_LIBRARY)
