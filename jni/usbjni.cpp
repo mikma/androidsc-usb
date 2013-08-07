@@ -11,6 +11,7 @@ struct libusb_context {
 };
 
 struct libusb_device {
+	jbyte refs;
 	jobject obj;
 };
 
@@ -193,6 +194,7 @@ ssize_t libusb_get_device_list(libusb_context *ctx,
 	for (int i=0; i<num; i++) {
 		list_p[i] = new libusb_device();
 		memset(list_p[i], 0, sizeof(*list_p[i]));
+		list_p[i]->refs = 1;
 		//jobject obj = env->NewLocalRef(env->GetObjectArrayElement(device_list, i));
 		jobject obj = env->GetObjectArrayElement(device_list, i);
 		if (env->IsInstanceOf(obj, gClsUsbDevice)) {
@@ -225,8 +227,7 @@ void libusb_free_device_list(libusb_device **list, int unref_devices)
 	while(list[num] != NULL) num++;
 
 	for (int i=0; i<num; i++) {
-		env->DeleteGlobalRef(list[i]->obj);
-		delete list[i];
+		libusb_unref_device(list[i]);
 	}
 
 	delete[] list;
@@ -374,11 +375,12 @@ int libusb_open(libusb_device *dev, libusb_device_handle **handle)
 	memset(handle_p, 0, sizeof(*handle_p));
 
 	handle_p->dev = dev;
-	handle_p->conn = env->CallObjectMethod(gManager, gid_opendevice, dev->obj);
+	handle_p->conn = env->NewGlobalRef(env->CallObjectMethod(gManager, gid_opendevice, dev->obj));
 
 	if (handle_p->conn == NULL)
 		return LIBUSB_ERROR_NO_DEVICE;
 
+	libusb_ref_device(handle_p->dev);
 	*handle = handle_p;
 	return LIBUSB_SUCCESS;
 }
@@ -392,8 +394,31 @@ void libusb_close(libusb_device_handle *handle)
 	gVM->AttachCurrentThread(&env, NULL);
 
 	env->CallVoidMethod(handle->conn, gid_connclose);
+	env->DeleteGlobalRef(handle->conn);
 	handle->conn = NULL;
+	libusb_unref_device(handle->dev);
 	delete handle;
+}
+
+libusb_device *libusb_ref_device(libusb_device *dev)
+{
+	printf("libusb_ref_device %p %d %p", dev, dev->refs, dev->obj);
+	dev->refs++;
+}
+
+void libusb_unref_device(libusb_device *dev)
+{
+	JNIEnv *env=NULL;
+	gVM->AttachCurrentThread(&env, NULL);
+
+	printf("libusb_unref_device %p %d %p", dev, dev->refs, dev->obj);
+
+	if (dev->refs-- == 0) {
+		printf("libusb_unref_device free global ref %p", dev->obj);
+		env->DeleteGlobalRef(dev->obj);
+		dev->obj = NULL;
+		delete dev;
+	}
 }
 
 struct libusb_transfer *libusb_alloc_transfer(int iso_packets)
@@ -449,7 +474,8 @@ void libusb_free_transfer(struct libusb_transfer *a_transfer)
 	}
 
 	env->CallVoidMethod(transfer->req, gid_setclientdata, NULL);
-	env->DeleteGlobalRef(transfer->req); transfer->req = NULL;
+	env->DeleteGlobalRef(transfer->req);
+	transfer->req = NULL;
 	delete transfer;
 }
 
