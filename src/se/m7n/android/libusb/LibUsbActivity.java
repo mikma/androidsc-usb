@@ -8,6 +8,9 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
+import android.view.View;
+import android.view.View.OnClickListener;
+import android.widget.Button;
 import android.widget.TextView;
 
 public class LibUsbActivity extends Activity
@@ -27,8 +30,9 @@ public class LibUsbActivity extends Activity
 
         setContentView(R.layout.main);
         mStatus = (TextView)this.findViewById(R.id.status);
+        ((Button)this.findViewById(R.id.start_scardcontrol)).setOnClickListener(mStartScardcontrol);
+        
         mUsb = new LibUsb(this);
-        mUsb.pcscmain();
         
         mHandler = new Handler(){
             @Override
@@ -40,10 +44,13 @@ public class LibUsbActivity extends Activity
                     }
             }
         };
-        Message msg = mHandler.obtainMessage(HANDLER_LSUSB);
-        // Allow pcscd to startup
-        mHandler.sendMessageDelayed(msg, 1000);
     }
+    
+    OnClickListener mStartScardcontrol = new OnClickListener() {
+        public void onClick(View v) {
+            mUsb.lsusb();
+        }
+    };
     
     @Override
     public void onResume() {
@@ -75,7 +82,7 @@ public class LibUsbActivity extends Activity
             mStatus.setText(R.string.disconnected);
         } else {
             mStatus.setText(R.string.connected);
-            mUsb.lsusb();
+            mUsb.pcscmain();
         }
     }
 }
