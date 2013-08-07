@@ -181,17 +181,10 @@ void libusb_exit(libusb_context *ctx)
 ssize_t libusb_get_device_list(libusb_context *ctx,
 	libusb_device ***list)
 {
-	int c=0;
-	__android_log_print(ANDROID_LOG_DEBUG, TAG, "libusb_get_device_list %d\n", c++);
-
 	JNIEnv *env=NULL;
 	jint res = gVM->AttachCurrentThread(&env, NULL);
 
-	printf("libusb_get_device_list attach %d %p\n", res, env);
-
 	jobjectArray device_list = (jobjectArray)env->CallObjectMethod(gCallback, gid_getdevicelist);
-
-	printf("libusb_get_device_list foo %d\n", 42);
 
 	int num = env->GetArrayLength(device_list);
 	libusb_device **list_p = new libusb_device*[num+1];
@@ -200,7 +193,6 @@ ssize_t libusb_get_device_list(libusb_context *ctx,
 	for (int i=0; i<num; i++) {
 		list_p[i] = new libusb_device();
 		memset(list_p[i], 0, sizeof(*list_p[i]));
-		__android_log_print(ANDROID_LOG_DEBUG, TAG, "libusb_get_device_list %d\n", c++);
 		//jobject obj = env->NewLocalRef(env->GetObjectArrayElement(device_list, i));
 		jobject obj = env->GetObjectArrayElement(device_list, i);
 		if (env->IsInstanceOf(obj, gClsUsbDevice)) {
@@ -210,21 +202,15 @@ ssize_t libusb_get_device_list(libusb_context *ctx,
 			jint bDeviceSubClass= env->CallIntMethod(obj, gid_getsubclass);
 			jstring devName = (jstring)env->CallObjectMethod(obj, gid_getdevname);
 			unsigned char isCopy = false;
-			const char *utf8 = env->GetStringUTFChars(devName, &isCopy);
-
-			printf("libusb_get_device_list %04x:%04x %d %d '%s'", idVendor, idProduct, bDeviceClass, bDeviceSubClass, utf8);
-			env->ReleaseStringUTFChars(devName, utf8);
-			list_p[i]->obj = env->NewLocalRef(obj);
+			list_p[i]->obj = env->NewGlobalRef(obj);
 		} else {
 			// FIXME throw error?
-			__android_log_print(ANDROID_LOG_DEBUG, TAG, "libusb_get_device_list not UsbDevice %d\n", c++);
+			printf("libusb_get_device_list not anUsbDevice");
 		}
-		__android_log_print(ANDROID_LOG_DEBUG, TAG, "libusb_get_device_list %d\n", c++);
 	}
 	list_p[num] = 0;
 	*list = list_p;
 
-	__android_log_print(ANDROID_LOG_DEBUG, TAG, "libusb_get_device_list exit %d\n", num);
 	return num;
 }
 
@@ -239,7 +225,7 @@ void libusb_free_device_list(libusb_device **list, int unref_devices)
 	while(list[num] != NULL) num++;
 
 	for (int i=0; i<num; i++) {
-		env->DeleteLocalRef(list[i]->obj);
+		env->DeleteGlobalRef(list[i]->obj);
 		delete list[i];
 	}
 
