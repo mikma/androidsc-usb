@@ -195,7 +195,7 @@ ssize_t libusb_get_device_list(libusb_context *ctx,
 
 	int num = env->GetArrayLength(device_list);
 	libusb_device **list_p = new libusb_device*[num+1];
-	memset(list_p, 0, sizeof(*list_p));
+	memset(list_p, 0, sizeof(*list_p) * (num+1));
 
 	for (int i=0; i<num; i++) {
 		list_p[i] = new libusb_device();
