@@ -412,8 +412,27 @@ void libusb_close(libusb_device_handle *handle)
 
 struct libusb_transfer *libusb_alloc_transfer(int iso_packets)
 {
-	// FIXME
-	return NULL;
+	printf("libusb_alloc_transfer");
+
+	if (iso_packets != 0)
+		return NULL;
+
+	JNIEnv *env=NULL;
+	gVM->AttachCurrentThread(&env, NULL);
+
+	libusb_transfer_jni *transfer = new libusb_transfer_jni;
+	memset(transfer, 0, sizeof(*transfer));
+	transfer->req = env->NewGlobalRef(env->NewObject(gClsRequest, gid_newrequest));
+
+	jobject object = env->NewObject(gClsLong, gid_newlong, (jlong)transfer);
+	if (object == NULL) {
+		env->DeleteGlobalRef(transfer->req);
+		delete transfer;
+		return NULL;
+	}
+
+	env->CallVoidMethod(transfer->req, gid_setclientdata, object);
+	return transfer;
 }
 
 int libusb_submit_transfer(struct libusb_transfer *transfer)
@@ -428,9 +447,24 @@ int libusb_cancel_transfer(struct libusb_transfer *transfer)
 	return LIBUSB_ERROR_OTHER;
 }
 
-void libusb_free_transfer(struct libusb_transfer *transfer)
+void libusb_free_transfer(struct libusb_transfer *a_transfer)
 {
-	// FIXME
+	printf("libusb_free_transfer %p", a_transfer);
+	if (a_transfer == NULL)
+		return;
+
+	JNIEnv *env=NULL;
+	gVM->AttachCurrentThread(&env, NULL);
+
+	libusb_transfer_jni *transfer = (libusb_transfer_jni*)a_transfer;
+
+	if (transfer->flags & LIBUSB_TRANSFER_FREE_BUFFER) {
+		free(transfer->buffer); transfer->buffer = NULL;
+	}
+
+	env->CallVoidMethod(transfer->req, gid_setclientdata, NULL);
+	env->DeleteGlobalRef(transfer->req); transfer->req = NULL;
+	delete transfer;
 }
 
 int libusb_get_string_descriptor_ascii(libusb_device_handle *dev,
