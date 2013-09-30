@@ -3,6 +3,7 @@
 #include <libusb/libusb.h>
 #include <string.h>
 #include <stdio.h>
+#include <algorithm>
 
 const char TAG[] = "LibUsb";
 
@@ -20,6 +21,12 @@ struct libusb_device_handle {
 	jobject conn;           // UsbDeviceConnection;
 };
 
+class libusb_transfer_jni: public libusb_transfer {
+public:
+	jobject req;		// UsbRequest
+	jobject buffer_obj;
+};
+
 libusb_context gContext;
 JavaVM* gVM;
 jobject gCallback;
@@ -33,6 +40,7 @@ jclass gClsByteBuffer;
 // Callback
 jmethodID gid_findendpoint;
 jmethodID gid_submittransfer;
+jmethodID gid_cbbulktransfer;
 
 // UsbDevice
 jmethodID gid_getdevicelist;
@@ -117,6 +125,7 @@ JNIEXPORT void JNICALL Java_se_m7n_android_libusb_LibUsb_setCallback(JNIEnv * en
 	// Callback
 	gid_findendpoint = env->GetMethodID(clsCallback, "findEndpoint", "(Landroid/hardware/usb/UsbDevice;I)Landroid/hardware/usb/UsbEndpoint;");
 	gid_submittransfer = env->GetMethodID(clsCallback, "submitTransfer", "(Landroid/hardware/usb/UsbDeviceConnection;Landroid/hardware/usb/UsbDevice;Landroid/hardware/usb/UsbRequest;Ljava/nio/ByteBuffer;II)Z");
+	gid_cbbulktransfer = env->GetMethodID(clsCallback, "bulkTransfer", "(Landroid/hardware/usb/UsbDeviceConnection;Landroid/hardware/usb/UsbEndpoint;[BII)I");
 
 	// UsbManager
 	gid_opendevice = env->GetMethodID(clsManager, "openDevice", "(Landroid/hardware/usb/UsbDevice;)Landroid/hardware/usb/UsbDeviceConnection;");
@@ -225,6 +234,10 @@ void libusb_free_device_list(libusb_device **list, int unref_devices)
 	int num = 0;
 	// TODO unref_devices
 
+	printf("libusb_free_device_list %p %p %d", list, *list, unref_devices);
+	// // TODO skip free now
+	// return;
+
 	JNIEnv *env=NULL;
 	gVM->AttachCurrentThread(&env, NULL);
 
@@ -285,12 +298,99 @@ uint8_t libusb_get_device_address(libusb_device *dev)
 	return addr;
 }
 
-int libusb_bulk_transfer(libusb_device_handle *dev_handle,
-	unsigned char endpoint, unsigned char *data, int length,
+#if 0
+static int find_endpoint(JNIEnv *env, libusb_device_handle *handle, int endpoint_id, jobject *endpoint_p, int *dir)
+{
+	int c=0;
+	printf("find_endpoint %d %p %p", c++, env, handle->dev->obj);
+	int num_ifaces = env->CallIntMethod(handle->dev->obj, gid_getinterfacecount);
+
+	printf("find_endpoint %d %p %d", c++, env, num_ifaces);
+
+	for (int i=0; i < num_ifaces; i++) {
+		printf("find_endpoint %d %d", c++, i);
+		// Get interface
+		jobject interface = env->CallObjectMethod(handle->dev->obj, gid_getinterface, i);
+		if (!interface)
+			return LIBUSB_ERROR_NO_DEVICE;
+
+		printf("find_endpoint %d %p", c++, interface);
+
+		jint num_endpoints = env->CallIntMethod(interface, gid_getendpointcount);
+		printf("find_endpoint %d %d", c++, num_endpoints);
+		for (int j=0; j < num_endpoints; j++) {
+			jobject endpoint = env->CallObjectMethod(interface, gid_getendpoint, j);
+			printf("find_endpoint %d %p", c++, endpoint);
+			if (endpoint == NULL)
+				continue;
+			jint id = env->CallIntMethod(endpoint, gid_getaddress);
+			printf("find_endpoint %d %d", c++, id);
+			if (endpoint_id == id) {
+				printf("find_endpoint %d found", c++);
+				*endpoint_p = endpoint;
+				return LIBUSB_SUCCESS;
+			}
+		}
+
+		// TODO release interface?
+	}
+
+	return LIBUSB_ERROR_NOT_FOUND;
+}
+#endif
+
+
+int libusb_bulk_transfer(libusb_device_handle *handle,
+	unsigned char endpoint_id, unsigned char *data, int length,
 	int *actual_length, unsigned int timeout)
 {
-	// FIXME
-	return LIBUSB_ERROR_OTHER;
+	if (handle == NULL)
+		return LIBUSB_ERROR_INVALID_PARAM;
+
+	JNIEnv *env=NULL;
+	gVM->AttachCurrentThread(&env, NULL);
+
+	jobject endpoint = NULL;
+	int dir = false;
+
+	endpoint = env->CallObjectMethod(gCallback, gid_findendpoint, handle->dev->obj, endpoint_id);
+	if (endpoint == NULL)
+		return LIBUSB_ERROR_NOT_FOUND;
+	// if (find_endpoint(env, handle, endpoint_id, &endpoint, &dir) < 0)
+	// 	return LIBUSB_ERROR_NOT_FOUND;
+
+	jbyteArray buffer = env->NewByteArray(length);
+
+	if ((endpoint_id & LIBUSB_ENDPOINT_DIR_MASK) == LIBUSB_ENDPOINT_OUT)
+		env->SetByteArrayRegion(buffer, 0, length, (const jbyte*)data);
+
+#if 0
+        jint timeout_new = 2000;
+        printf("Bulk transfer timeout %d->%d", timeout, timeout_new);
+        timeout = timeout_new;
+#endif
+
+#if 1
+	jint res = env->CallIntMethod(handle->conn, gid_bulktransfer, endpoint, buffer, length, timeout);
+#else
+        jint res = env->CallIntMethod(gCallback, gid_cbbulktransfer, handle->conn, endpoint, buffer, length, timeout);
+#endif
+
+        printf("Bulk transfer res %d", res);
+        res = 8;
+
+	if ((res > 0) && ((endpoint_id & LIBUSB_ENDPOINT_DIR_MASK) == LIBUSB_ENDPOINT_IN)) {
+		env->GetByteArrayRegion(buffer, 0, res, (jbyte*)data);
+	}
+
+	if (res >= 0)
+		*actual_length = res;
+
+	env->DeleteLocalRef(buffer); buffer = NULL;
+	env->DeleteLocalRef(endpoint); endpoint = NULL;
+
+	// TODO translate negative error?
+	return res;
 }
 
 int libusb_reset_device(libusb_device_handle *dev)
@@ -356,7 +456,15 @@ int libusb_control_transfer(libusb_device_handle *handle,
 	if ((request_type & LIBUSB_ENDPOINT_DIR_MASK) == LIBUSB_ENDPOINT_OUT)
 		env->SetByteArrayRegion(buffer, 0, length, (const jbyte*)data);
 
+#if 1
+	jint timeout_new = 2000;
+	printf("libusb_control_transfer timeout %d->%d", timeout, timeout_new);
+	timeout = timeout_new;
+#endif
+
 	jint res = env->CallIntMethod(handle->conn, gid_controltransfer, request_type, request, value, index, buffer, length, timeout);
+
+	printf("libusb_control_transfer res %d", res);
 
 	if ((res > 0) && (request_type & LIBUSB_ENDPOINT_DIR_MASK) == LIBUSB_ENDPOINT_IN)
 		env->GetByteArrayRegion(buffer, 0, res, (jbyte*)data);
@@ -380,6 +488,8 @@ int libusb_open(libusb_device *dev, libusb_device_handle **handle)
 
 	handle_p->dev = dev;
 	handle_p->conn = env->NewGlobalRef(env->CallObjectMethod(gManager, gid_opendevice, dev->obj));
+
+	printf("libusb_open2 %p %p %p %p", handle_p, handle_p->dev, handle_p->dev->obj, handle_p->conn);
 
 	if (handle_p->conn == NULL)
 		return LIBUSB_ERROR_NO_DEVICE;
@@ -450,15 +560,77 @@ struct libusb_transfer *libusb_alloc_transfer(int iso_packets)
 	return transfer;
 }
 
-int libusb_submit_transfer(struct libusb_transfer *transfer)
+#if 0
+static libusb_transfer_jni *get_transfer(JNIEnv *env, jobject req)
+{
+	jobject obj = env->CallObjectMethod(req, gid_getclientdata);
+	if (obj == NULL)
+		return NULL;
+	jlong l = env->CallLongMethod(obj, gid_longvalue);
+	return (libusb_transfer_jni *)l;
+}
+#endif
+
+int libusb_submit_transfer(struct libusb_transfer *a_transfer)
 {
 	// FIXME
-	return LIBUSB_ERROR_OTHER;
+	int c=0;
+	printf("libusb_submit_transfer %d %p", c++, a_transfer);
+	if (a_transfer == NULL)
+		return LIBUSB_ERROR_INVALID_PARAM;
+
+	JNIEnv *env=NULL;
+	gVM->AttachCurrentThread(&env, NULL);
+
+	libusb_transfer_jni *transfer = (libusb_transfer_jni*)a_transfer;
+
+	transfer->buffer_obj = env->NewGlobalRef(env->CallStaticObjectMethod(gClsByteBuffer, gid_allocatedirect, transfer->length));
+
+	printf("libusb_submit_transfer %d %p", c++, transfer->buffer_obj);
+
+	if (env->CallObjectMethod(gCallback, gid_submittransfer, transfer->dev_handle->conn, transfer->dev_handle->dev->obj, transfer->req, transfer->buffer_obj, transfer->endpoint, transfer->length))
+		return LIBUSB_SUCCESS;
+	else
+		return LIBUSB_ERROR_IO;
+
+	jobject endpoint = NULL;
+	printf("libusb_submit_transfer %d %p %p %p %p %d", c++, env, transfer->dev_handle, transfer->dev_handle->dev, transfer->dev_handle->dev->obj, transfer->endpoint);
+	// if (find_endpoint(env, transfer->dev_handle, transfer->endpoint, &endpoint, NULL) < 0)
+	// 	return LIBUSB_ERROR_NOT_FOUND;
+
+	endpoint = env->CallObjectMethod(gCallback, gid_findendpoint, transfer->dev_handle->dev->obj, transfer->endpoint);
+	if (endpoint == NULL)
+		return LIBUSB_ERROR_NOT_FOUND;
+
+	printf("libusb_submit_transfer %d %p %p", c++, transfer->dev_handle->dev->obj, endpoint);
+	if (!env->CallBooleanMethod(transfer->req, gid_initialize, transfer->dev_handle->dev->obj, endpoint))
+		return LIBUSB_ERROR_ACCESS;
+
+	printf("libusb_submit_transfer %d %d", c++, transfer->length);
+	transfer->buffer_obj = env->NewGlobalRef(env->CallStaticObjectMethod(gClsByteBuffer, gid_allocatedirect, transfer->length));
+	printf("libusb_submit_transfer %d", c++);
+
+	if ((transfer->endpoint & LIBUSB_ENDPOINT_DIR_MASK) == LIBUSB_ENDPOINT_OUT) {
+		jbyteArray array = env->NewByteArray(transfer->length);
+		env->SetByteArrayRegion(array, 0, transfer->length, (const jbyte*)transfer->buffer);
+		env->CallObjectMethod(transfer->buffer_obj, gid_put, array);
+		// env->CallVoidMethod(transfer->buffer_obj, gid_rewind);
+	}
+	printf("libusb_submit_transfer %d %p %p %d", c++, transfer->req, transfer->buffer_obj, transfer->length);
+
+	if (!env->CallBooleanMethod(transfer->req, gid_queue, transfer->buffer_obj, transfer->length)) {
+		printf("libusb_submit_transfer failed");
+		return LIBUSB_ERROR_IO;
+	}
+
+	printf("libusb_submit_transfer %d", c++);
+	return LIBUSB_SUCCESS;
 }
 
 int libusb_cancel_transfer(struct libusb_transfer *transfer)
 {
 	// FIXME
+	printf("libusb_cancel_transfer %p", transfer);
 	return LIBUSB_ERROR_OTHER;
 }
 
@@ -555,6 +727,7 @@ int libusb_get_active_config_descriptor(libusb_device *dev,
 
 		libusb_endpoint_descriptor *endpoints = new libusb_endpoint_descriptor[desc->bNumEndpoints];
 		memset(endpoints, 0, sizeof(*endpoints) * desc->bNumEndpoints);
+		desc->endpoint = endpoints;
 
 		for (int j=0; j < desc->bNumEndpoints; j++) {
 			jobject endpoint = env->CallObjectMethod(interface, gid_getendpoint, j);
