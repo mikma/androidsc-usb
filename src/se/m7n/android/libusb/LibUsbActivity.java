@@ -17,6 +17,7 @@ public class LibUsbActivity extends Activity
 {
     private static final String TAG = "LibUsb";
     protected static final int HANDLER_LSUSB = 1;
+    protected static final int HANDLER_PCSCD = 2;
     private Object mDevice;
     private TextView mStatus;
     private LibUsb mUsb;
@@ -33,6 +34,7 @@ public class LibUsbActivity extends Activity
         ((Button)this.findViewById(R.id.start_scardcontrol)).setOnClickListener(mStartScardcontrol);
         
         mUsb = new LibUsb(this);
+        //mUsb.pcscmain();
         
         mHandler = new Handler(){
             @Override
@@ -40,6 +42,9 @@ public class LibUsbActivity extends Activity
                     switch (msg.what) {
                     case HANDLER_LSUSB:
                         mUsb.lsusb();
+                        break;
+                    case HANDLER_PCSCD:
+                        mUsb.pcscmain();
                         break;
                     }
             }
@@ -82,7 +87,8 @@ public class LibUsbActivity extends Activity
             mStatus.setText(R.string.disconnected);
         } else {
             mStatus.setText(R.string.connected);
-            mUsb.pcscmain();
+            Message msg = mHandler.obtainMessage(HANDLER_PCSCD);
+            mHandler.sendMessageDelayed(msg, 500);
         }
     }
 }
