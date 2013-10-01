@@ -370,7 +370,7 @@ int libusb_bulk_transfer(libusb_device_handle *handle,
         timeout = timeout_new;
 #endif
 
-#if 1
+#if 0
 	jint res = env->CallIntMethod(handle->conn, gid_bulktransfer, endpoint, buffer, length, timeout);
 #else
         jint res = env->CallIntMethod(gCallback, gid_cbbulktransfer, handle->conn, endpoint, buffer, length, timeout);

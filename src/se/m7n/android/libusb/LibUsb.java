@@ -88,6 +88,9 @@ public class LibUsb {
         }
 
         public int bulkTransfer(UsbDeviceConnection conn, UsbEndpoint ep, byte[] data, int length, int timeout) {
+            return conn.bulkTransfer(ep, data, length, timeout);
+        }
+        public int bulkTransferX(UsbDeviceConnection conn, UsbEndpoint ep, byte[] data, int length, int timeout) {
             UsbRequest req = new UsbRequest();
             if (!req.initialize(conn, ep)) {
                 Log.e(TAG, "bulkTransfer initialize failed");
