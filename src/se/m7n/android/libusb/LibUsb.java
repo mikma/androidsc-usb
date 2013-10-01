@@ -131,14 +131,23 @@ public class LibUsb {
             public void run() {
                 pcscmain(mCallback);                
             }
-        }).start();
+        }, "pcscmain").start();
     }
     
+    public void pcscproxy() {
+        new Thread(new Runnable() {
+            public void run() {
+                pcscproxymain(mCallback);
+            }
+        }, "pcscproxy").start();
+    }
+
     public void lsusb() {
         lsusb(mCallback);                
     }
 
     native private void lsusb(Callback callback); 
     native private void pcscmain(Callback callback); 
+    native private void pcscproxymain(Callback callback);
     native private void setCallback(Callback callback); 
 }

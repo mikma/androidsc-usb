@@ -5,4 +5,5 @@
     <string name="connected">Connected</string>
     <string name="disconnected">Disconnected</string>
     <string name="start_scardcontrol">Start scardcontrol</string>
+    <string name="start_pcscproxy">Start pcsc-proxy</string>
 </resources>

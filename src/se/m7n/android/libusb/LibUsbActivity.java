@@ -32,6 +32,7 @@ public class LibUsbActivity extends Activity
         setContentView(R.layout.main);
         mStatus = (TextView)this.findViewById(R.id.status);
         ((Button)this.findViewById(R.id.start_scardcontrol)).setOnClickListener(mStartScardcontrol);
+        ((Button)this.findViewById(R.id.start_pcscproxy)).setOnClickListener(mStartPcscProxy);
         
         mUsb = new LibUsb(this);
         //mUsb.pcscmain();
@@ -56,7 +57,13 @@ public class LibUsbActivity extends Activity
             mUsb.lsusb();
         }
     };
-    
+
+    OnClickListener mStartPcscProxy = new OnClickListener() {
+        public void onClick(View v) {
+            mUsb.pcscproxy();
+        }
+    };
+
     @Override
     public void onResume() {
         super.onResume();
@@ -67,11 +74,14 @@ public class LibUsbActivity extends Activity
 
         UsbDevice device = (UsbDevice)intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
         if (UsbManager.ACTION_USB_DEVICE_ATTACHED.equals(action)) {
-            setDevice(device);
+            setDevice(device, true);
         } else if (UsbManager.ACTION_USB_DEVICE_DETACHED.equals(action)) {
             if (mDevice != null && mDevice.equals(device)) {
-                setDevice(null);
+                setDevice(null, false);
             }
+        } else {
+            // Normal start
+            setDevice(null, true);
         }
     }
     
@@ -81,9 +91,9 @@ public class LibUsbActivity extends Activity
         mUsb = null;
     }
 
-    private void setDevice(Object object) {
+    private void setDevice(Object object, boolean start) {
         mDevice = object;
-        if (mDevice == null) {
+        if (!start) {
             mStatus.setText(R.string.disconnected);
         } else {
             mStatus.setText(R.string.connected);

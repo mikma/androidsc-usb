@@ -13,10 +13,11 @@ LOCAL_CFLAGS	:= -I$(LOCAL_PATH)
 LOCAL_SRC_FILES := main_jni.cpp
 LOCAL_LDLIBS	:= -llog
 #LOCAL_PRELINK_MODULE := false
-LOCAL_SHARED_LIBRARIES := pcscd libscardcontrol
+LOCAL_SHARED_LIBRARIES := pcscd libscardcontrol libpcsc libpcscproxy
 LOCAL_SHARED_LIBRARIES += libusb
 
 include $(BUILD_SHARED_LIBRARY)
 
 $(call import-module,ccid)
 $(call import-module,pcsc-lite)
+$(call import-module,pcsc-proxy)
