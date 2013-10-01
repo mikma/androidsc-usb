@@ -377,7 +377,6 @@ int libusb_bulk_transfer(libusb_device_handle *handle,
 #endif
 
         printf("Bulk transfer res %d", res);
-        res = 8;
 
 	if ((res > 0) && ((endpoint_id & LIBUSB_ENDPOINT_DIR_MASK) == LIBUSB_ENDPOINT_IN)) {
 		env->GetByteArrayRegion(buffer, 0, res, (jbyte*)data);
