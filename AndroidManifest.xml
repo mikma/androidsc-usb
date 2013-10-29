@@ -7,6 +7,14 @@
     	android:minSdkVersion="12"
         android:targetSdkVersion="18" />
     
+    <permission
+        android:name="org.openintents.smartcard.permission.ACCESS_PCSC"
+        android:protectionLevel="dangerous"
+        android:permissionGroup="android.permission-group.PERSONAL_INFO"
+        android:label="@string/pcsc_daemon_permission_label"
+        android:description="@string/pcsc_daemon_permission_desc">
+    </permission>
+
     <application android:label="@string/app_name" android:icon="@drawable/ic_launcher">
         <activity android:name="LibUsbActivity"
                   android:label="@string/app_name">
@@ -22,5 +30,12 @@
              <meta-data android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED"
                 android:resource="@xml/device_filter" />
         </activity>
+        <service android:name="LibUsb"
+                 android:permission="org.openintents.smartcard.permission.ACCESS_PCSC">
+          <intent-filter>
+            <action android:name="org.openintents.smartcard.BIND_PCSC" />
+            <category android:name="android.intent.category.DEFAULT" />
+          </intent-filter>
+        </service>
     </application>
 </manifest>

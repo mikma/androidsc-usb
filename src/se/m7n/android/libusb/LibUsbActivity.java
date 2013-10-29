@@ -1,17 +1,22 @@
 package se.m7n.android.libusb;
 
 import android.app.Activity;
+import android.content.ComponentName;
 import android.content.Intent;
+import android.content.ServiceConnection;
 import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbManager;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.IBinder;
 import android.os.Message;
 import android.util.Log;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.Button;
 import android.widget.TextView;
+
+import org.openintents.smartcard.PCSCDaemon;
 
 public class LibUsbActivity extends Activity
 {
@@ -34,8 +39,11 @@ public class LibUsbActivity extends Activity
         ((Button)this.findViewById(R.id.start_scardcontrol)).setOnClickListener(mStartScardcontrol);
         ((Button)this.findViewById(R.id.start_pcscproxy)).setOnClickListener(mStartPcscProxy);
         
-        mUsb = new LibUsb(this);
+        //mUsb = new LibUsb(this);
         //mUsb.pcscmain();
+
+        Intent intent = new Intent(this, LibUsb.class);
+        bindService(intent, connection, BIND_AUTO_CREATE);
         
         mHandler = new Handler(){
             @Override
@@ -45,6 +53,7 @@ public class LibUsbActivity extends Activity
                         mUsb.lsusb();
                         break;
                     case HANDLER_PCSCD:
+                        Log.d(TAG, "pcscd start");
                         mUsb.pcscmain();
                         break;
                     }
@@ -52,6 +61,13 @@ public class LibUsbActivity extends Activity
         };
     }
     
+    @Override
+    public void onDestroy()
+    {
+        unbindService(connection);
+        super.onDestroy();
+    }
+
     OnClickListener mStartScardcontrol = new OnClickListener() {
         public void onClick(View v) {
             mUsb.lsusb();
@@ -88,7 +104,6 @@ public class LibUsbActivity extends Activity
     @Override
     public void onPause() {
         super.onPause();
-        mUsb = null;
     }
 
     private void setDevice(Object object, boolean start) {
@@ -101,4 +116,16 @@ public class LibUsbActivity extends Activity
             mHandler.sendMessageDelayed(msg, 500);
         }
     }
+
+    private final ServiceConnection connection = new ServiceConnection() {
+            public void onServiceConnected(ComponentName className,
+                                            IBinder service) {
+                Log.d(TAG, "Bound " + className);
+                LibUsb.PCSCBinder binder = (LibUsb.PCSCBinder)service;
+                mUsb = binder.getService();
+            }
+            public void onServiceDisconnected(ComponentName className) {
+                mUsb = null;
+            }
+        };
 }

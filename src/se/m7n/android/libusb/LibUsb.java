@@ -2,7 +2,12 @@ package se.m7n.android.libusb;
 
 import java.nio.ByteBuffer;
 
+import android.app.Service;
 import android.content.Context;
+import android.content.Intent;
+import android.content.ServiceConnection;
+import android.os.Binder;
+import android.os.IBinder;
 import android.hardware.usb.UsbConstants;
 import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbDeviceConnection;
@@ -12,7 +17,9 @@ import android.hardware.usb.UsbManager;
 import android.hardware.usb.UsbRequest;
 import android.util.Log;
 
-public class LibUsb {
+import org.openintents.smartcard.PCSCDaemon;
+
+public class LibUsb extends Service {
     public final static String TAG = "LibUsb";
 
     static {
@@ -23,18 +30,103 @@ public class LibUsb {
         System.loadLibrary("scardcontrol");
         System.loadLibrary("usbjni");
     }
-    private Context mContext;
     private Callback mCallback;
+    private boolean mIsStarted;
+    private String mSocketName;
     
-    LibUsb(Context context) {
-        mContext = context;
+    @Override
+    public void onCreate() {
+        super.onCreate();
+
         mCallback = new Callback();
         setCallback(mCallback);
+
+        mIsStarted = false;
+        mSocketName = toString();
+
+        Log.d(TAG, "onCreate: " + mSocketName);
+        // Setenv.setenv("test", "value", 1);
     }
-    
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+
+        Log.d(TAG, "onDestroy");
+        if (mIsStarted) {
+            // TODO stop pcsc-proxy
+        }
+    }
+
+    @Override
+    public IBinder onBind(Intent intent) {
+        // Return the interface
+        Log.d(TAG, "onBind");
+
+        return mBinder;
+    }
+
+    @Override
+    public boolean onUnbind(Intent intent) {
+        Log.d(TAG, "onUnbind");
+        return true;
+    }
+
+    private boolean isStarted() {
+        return mIsStarted;
+    }
+
+    private void start() {
+        if (mIsStarted)
+            return;
+        mIsStarted = true;
+        // pcscmain();
+        // pcscproxy();
+    }
+
+    private void stop() {
+        // FIXME
+    }
+
+    private final PCSCDaemon.Stub mBinder = new PCSCBinder();
+
+    final class PCSCBinder extends PCSCDaemon.Stub {
+        public LibUsb getService() {
+            return LibUsb.this;
+        }
+
+        public boolean start() {
+            Log.d(TAG, "start " + String.format("pid:%d uid:%d", getCallingPid(), getCallingUid()));
+            if (isStarted()) {
+                Log.e(TAG, "Already started");
+                return false;
+            }
+            LibUsb.this.start();
+            return true;
+        }
+        public void stop() {
+            if (isStarted()) {
+                LibUsb.this.stop();
+            } else {
+                Log.e(TAG, "Not started");
+            }
+        }
+        public String getLocalSocketAddress() {
+            if (!isStarted()) {
+                Log.e(TAG, "Not started");
+                return null;
+            }
+
+            return mSocketName;
+        }
+        public boolean isTlsRequired() {
+            return false;
+        }
+    }
+
     public class Callback {
         public UsbManager getUsbManager() {
-            return (UsbManager) mContext.getSystemService(Context.USB_SERVICE);
+            return (UsbManager) getSystemService(Context.USB_SERVICE);
         }
         public Object[] getDeviceList() {
             Log.d(TAG, "getDeviceList");

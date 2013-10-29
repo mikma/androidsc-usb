@@ -6,4 +6,6 @@
     <string name="disconnected">Disconnected</string>
     <string name="start_scardcontrol">Start scardcontrol</string>
     <string name="start_pcscproxy">Start pcsc-proxy</string>
+    <string name="pcsc_daemon_permission_label">Smart card access</string>
+    <string name="pcsc_daemon_permission_desc">Allows the application to access a smart card.</string>
 </resources>
