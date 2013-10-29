@@ -179,6 +179,9 @@ public class LibUsb extends Service {
             return res;
         }
 
+        public int controlTransfer(UsbDeviceConnection conn, int requestType, int request, int value, int index, byte[] buffer, int length, int timeout) {
+            return conn.controlTransfer(requestType, request, value, index, buffer, length, timeout);
+        }
         public int bulkTransfer(UsbDeviceConnection conn, UsbEndpoint ep, byte[] data, int length, int timeout) {
             return conn.bulkTransfer(ep, data, length, timeout);
         }

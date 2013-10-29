@@ -41,6 +41,7 @@ jclass gClsByteBuffer;
 jmethodID gid_findendpoint;
 jmethodID gid_submittransfer;
 jmethodID gid_cbbulktransfer;
+jmethodID gid_cbcontroltransfer;
 
 // UsbDevice
 jmethodID gid_getdevicelist;
@@ -125,6 +126,7 @@ JNIEXPORT void JNICALL Java_se_m7n_android_libusb_LibUsb_setCallback(JNIEnv * en
 	// Callback
 	gid_findendpoint = env->GetMethodID(clsCallback, "findEndpoint", "(Landroid/hardware/usb/UsbDevice;I)Landroid/hardware/usb/UsbEndpoint;");
 	gid_submittransfer = env->GetMethodID(clsCallback, "submitTransfer", "(Landroid/hardware/usb/UsbDeviceConnection;Landroid/hardware/usb/UsbDevice;Landroid/hardware/usb/UsbRequest;Ljava/nio/ByteBuffer;II)Z");
+	gid_cbcontroltransfer = env->GetMethodID(clsCallback, "controlTransfer", "(Landroid/hardware/usb/UsbDeviceConnection;IIII[BII)I");
 	gid_cbbulktransfer = env->GetMethodID(clsCallback, "bulkTransfer", "(Landroid/hardware/usb/UsbDeviceConnection;Landroid/hardware/usb/UsbEndpoint;[BII)I");
 
 	// UsbManager
@@ -461,8 +463,11 @@ int libusb_control_transfer(libusb_device_handle *handle,
 	timeout = timeout_new;
 #endif
 
+#if 0
 	jint res = env->CallIntMethod(handle->conn, gid_controltransfer, request_type, request, value, index, buffer, length, timeout);
-
+#else
+	jint res = env->CallIntMethod(gCallback, gid_cbcontroltransfer, handle->conn, request_type, request, value, index, buffer, length, timeout);
+#endif
 	printf("libusb_control_transfer res %d", res);
 
 	if ((res > 0) && (request_type & LIBUSB_ENDPOINT_DIR_MASK) == LIBUSB_ENDPOINT_IN)
