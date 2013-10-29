@@ -378,8 +378,6 @@ int libusb_bulk_transfer(libusb_device_handle *handle,
         jint res = env->CallIntMethod(gCallback, gid_cbbulktransfer, handle->conn, endpoint, buffer, length, timeout);
 #endif
 
-        printf("Bulk transfer res %d", res);
-
 	if ((res > 0) && ((endpoint_id & LIBUSB_ENDPOINT_DIR_MASK) == LIBUSB_ENDPOINT_IN)) {
 		env->GetByteArrayRegion(buffer, 0, res, (jbyte*)data);
 	}
@@ -414,7 +412,7 @@ int libusb_claim_interface(libusb_device_handle *handle, int iface)
 	if (!interface)
 		return LIBUSB_ERROR_NO_DEVICE;
 
-	bool force = false;     // true to disconnect kernel driver if necessary
+	bool force = true;     // true to disconnect kernel driver if necessary
 	bool res = env->CallBooleanMethod(handle->conn, gid_claiminterface, interface, force);
 	if (!res)
 		return LIBUSB_ERROR_ACCESS;
@@ -457,7 +455,7 @@ int libusb_control_transfer(libusb_device_handle *handle,
 	if ((request_type & LIBUSB_ENDPOINT_DIR_MASK) == LIBUSB_ENDPOINT_OUT)
 		env->SetByteArrayRegion(buffer, 0, length, (const jbyte*)data);
 
-#if 1
+#if 0
 	jint timeout_new = 2000;
 	printf("libusb_control_transfer timeout %d->%d", timeout, timeout_new);
 	timeout = timeout_new;
