@@ -3,6 +3,7 @@
 #include <libusb/libusb.h>
 #include <string.h>
 #include <stdio.h>
+#include <vector>
 #include <algorithm>
 
 const char TAG[] = "LibUsb";
@@ -26,6 +27,8 @@ public:
 	jobject req;		// UsbRequest
 	jobject buffer_obj;
 };
+
+std::vector<libusb_device_handle*> gOpened;
 
 libusb_context gContext;
 JavaVM* gVM;
@@ -498,6 +501,7 @@ int libusb_open(libusb_device *dev, libusb_device_handle **handle)
 
 	libusb_ref_device(handle_p->dev);
 	*handle = handle_p;
+	gOpened.push_back(handle_p);
 	return LIBUSB_SUCCESS;
 }
 
@@ -512,6 +516,14 @@ void libusb_close(libusb_device_handle *handle)
 	env->CallVoidMethod(handle->conn, gid_connclose);
 	env->DeleteGlobalRef(handle->conn);
 	handle->conn = NULL;
+
+	std::vector<libusb_device_handle*>::iterator iter = std::find(gOpened.begin(), gOpened.end(), handle);
+	if (iter != gOpened.end()) {
+		printf("libusb_close remove handle");
+		gOpened.erase(iter);
+	} else {
+		printf("libusb_close handle not found");
+	}
 	libusb_unref_device(handle->dev);
 	delete handle;
 }
@@ -777,6 +789,94 @@ int libusb_get_active_config_descriptor(libusb_device *dev,
 int libusb_handle_events(libusb_context *ctx)
 {
 	// FIXME
+	printf("libusb_handle_events %p", ctx);
+
+	JNIEnv *env=NULL;
+	gVM->AttachCurrentThread(&env, NULL);
+
+	std::vector<libusb_device_handle*>::iterator first = gOpened.begin();
+	std::vector<libusb_device_handle*>::iterator last = gOpened.end();
+
+        // TODO run in separate thread and use conditions variables etc.
+	for (std::vector<libusb_device_handle*>::iterator i = first; i != last; i++) {
+		libusb_device_handle *handle = *i;
+
+		// TODO check if request is pending
+		printf("libusb_handle_events req: %p %p %p %p", handle, handle->conn, handle->dev, handle->dev->obj);
+
+		jobject req = env->CallObjectMethod(handle->conn, gid_requestwait);
+		if (req == NULL) {
+			printf("libusb_handle_events no request");
+			continue;
+		}
+
+		printf("libusb_handle_events got request %p", req);
+
+		jobject obj= env->CallObjectMethod(req, gid_getclientdata);
+		if (obj == NULL) {
+			printf("libusb_handle_events null client object");
+			continue;
+		}
+
+		jlong l = env->CallLongMethod(obj, gid_longvalue);
+		libusb_transfer_jni *transfer = (libusb_transfer_jni*)l;
+		if (transfer == NULL) {
+			printf("libusb_handle_events null client data");
+			continue;
+		}
+
+		// TODO test rewind
+		// env->CallVoidMethod(transfer->buffer_obj, gid_rewind);
+
+		jint limit = env->CallIntMethod(transfer->buffer_obj, gid_limit);
+		jint position = env->CallIntMethod(transfer->buffer_obj, gid_position);
+		jint capacity = env->CallIntMethod(transfer->buffer_obj, gid_capacity);
+
+		printf("libusb_handle_events buf: %d %d %d", limit, position, capacity);
+
+		if ((transfer->endpoint & LIBUSB_ENDPOINT_DIR_MASK) == LIBUSB_ENDPOINT_IN) {
+			transfer->actual_length = position;
+			// TODO correct to rewind?
+			env->CallVoidMethod(transfer->buffer_obj, gid_rewind);
+			printf("libusb_handle_events actual_length received %d", transfer->actual_length);
+
+			jbyteArray array = env->NewByteArray(transfer->actual_length);
+			if (env->CallObjectMethod(transfer->buffer_obj, gid_get, array) == NULL) {
+				printf("libusb_handle_events buffer get failed");
+				// TODO delete refs
+				continue;
+			}
+			jint len = transfer->actual_length < transfer->length ? transfer->actual_length : transfer->length;
+			printf("libusb_handle_events get %d", len);
+			env->GetByteArrayRegion(array, 0, len, (jbyte*)transfer->buffer);
+		} else {
+			transfer->actual_length = position;
+			printf("libusb_handle_events actual_length sent %d", transfer->actual_length);
+		}
+
+		if (transfer->actual_length < transfer->length
+		    && transfer->flags & LIBUSB_TRANSFER_SHORT_NOT_OK) {
+			printf("libusb_handle_events error to short");
+			transfer->status = LIBUSB_TRANSFER_ERROR;
+		} else {
+			printf("libusb_handle_events completed");
+			transfer->status = LIBUSB_TRANSFER_COMPLETED;
+		}
+
+		if (transfer->callback) {
+			printf("libusb_handle_events callback");
+			transfer->callback(transfer);
+		}
+
+		if (transfer->flags & LIBUSB_TRANSFER_FREE_TRANSFER) {
+			printf("libusb_handle_events free transfer");
+			libusb_free_transfer(transfer);
+		}
+
+		printf("libusb_handle_events request handled");
+		return LIBUSB_SUCCESS;
+	}
+
 	return LIBUSB_ERROR_OTHER;
 }
 
