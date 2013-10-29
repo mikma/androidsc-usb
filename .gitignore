@@ -1,3 +1,7 @@
+jni/ccid.bak/
+jni/pcsc-lite.bak/
+jni/pcsc-proxy.bak/
+
 bin/
 gen/
 libs/
