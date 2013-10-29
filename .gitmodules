@@ -1,0 +1,9 @@
+[submodule "jni/ccid"]
+	path = jni/ccid
+	url = git://git.m7n.se/pub/ccid.git
+[submodule "jni/pcsc-lite"]
+	path = jni/pcsc-lite
+        url = git://git.m7n.se/pub/pcsc-lite.git
+[submodule "jni/pcsc-proxy"]
+	path = jni/pcsc-proxy
+	url = git://git.m7n.se/pub/android/pcsc-proxy.git
