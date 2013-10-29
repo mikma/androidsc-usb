@@ -7,3 +7,6 @@
 [submodule "jni/pcsc-proxy"]
 	path = jni/pcsc-proxy
 	url = git://git.m7n.se/pub/android/pcsc-proxy.git
+[submodule "jni/coffeecatch"]
+	path = jni/coffeecatch
+	url = https://github.com/xroche/coffeecatch.git
