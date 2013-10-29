@@ -8,4 +8,6 @@
     <string name="start_pcscproxy">Start pcsc-proxy</string>
     <string name="pcsc_daemon_permission_label">Smart card access</string>
     <string name="pcsc_daemon_permission_desc">Allows the application to access a smart card.</string>
+    <string name="start_lsusb">Start lsusb</string>
+    <string name="start_pcscd">Start pcscd</string>
 </resources>

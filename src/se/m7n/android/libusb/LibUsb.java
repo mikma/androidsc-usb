@@ -224,7 +224,7 @@ public class LibUsb extends Service {
     public void pcscmain() {
         new Thread(new Runnable() {
             public void run() {
-                pcscmain(mCallback);                
+                pcscmain(mCallback);
             }
         }, "pcscmain").start();
     }
@@ -232,17 +232,22 @@ public class LibUsb extends Service {
     public void pcscproxy() {
         new Thread(new Runnable() {
             public void run() {
-                pcscproxymain(mCallback);
+                pcscproxymain(mCallback, mSocketName);
             }
         }, "pcscproxy").start();
     }
 
-    public void lsusb() {
-        lsusb(mCallback);                
+    public void scardcontrol() {
+        scardcontrol(mCallback);
     }
 
+    public void lsusb() {
+        lsusb(mCallback);
+    }
+
+    native private void scardcontrol(Callback callback);
     native private void lsusb(Callback callback); 
-    native private void pcscmain(Callback callback); 
-    native private void pcscproxymain(Callback callback);
+    native private void pcscmain(Callback callback);
+    native private void pcscproxymain(Callback callback, String mSocketName);
     native private void setCallback(Callback callback); 
 }
