@@ -37,7 +37,7 @@ JNIEXPORT void JNICALL Java_se_m7n_android_libusb_LibUsb_scardcontrol(JNIEnv * e
         // Reset getopt
         optind = 1;
 #ifdef COFFEE_TRY_JNI
-	COFFEE_TRY_JNI(scardcontrol_main(argc, argv));
+	COFFEE_TRY_JNI(env, scardcontrol_main(argc, argv));
 #else
 	scardcontrol_main(argc, argv);
 #endif
@@ -53,7 +53,7 @@ JNIEXPORT void JNICALL Java_se_m7n_android_libusb_LibUsb_lsusb(JNIEnv * env, job
         // Reset getopt
         optind = 1;
 #ifdef COFFEE_TRY_JNI
-	COFFEE_TRY_JNI(main(argc, argv));
+	COFFEE_TRY_JNI(env, main(argc, argv));
 #else
 	main(argc, argv);
 #endif
@@ -93,7 +93,7 @@ JNIEXPORT void JNICALL Java_se_m7n_android_libusb_LibUsb_pcscproxymain(JNIEnv * 
         optind = 1;
 	__android_log_print(ANDROID_LOG_DEBUG, TAG, "Before pcsc-proxy main");
 #ifdef COFFEE_TRY_JNI
-	COFFEE_TRY_JNI(env, pcscproxymain_protected(env, obj, callback, socketName));
+	COFFEE_TRY_JNI(env, pcsc_proxy_main(argc, argv));
 #else
 	pcsc_proxy_main(argc, argv);
 #endif
