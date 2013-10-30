@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <vector>
 #include <algorithm>
+#include <pthread.h>
 
 const char TAG[] = "LibUsb";
 
@@ -30,6 +31,7 @@ public:
 
 std::vector<libusb_device_handle*> gOpened;
 
+pthread_key_t gCurrentJNIEnv;
 libusb_context gContext;
 JavaVM* gVM;
 jobject gCallback;
@@ -104,11 +106,52 @@ extern "C" {
 	JNIEXPORT void JNICALL Java_se_m7n_android_libusb_LibUsb_setCallback(JNIEnv * env, jobject obj, jobject callback);
 };
 
+
+//
+// Solve bug: "threadid=X: native thread exited without detaching"
+//
+// Solution based on http://yltechblog.blogspot.se/2013/05/jni-detaching-threads-native-thread.html
+//
+// Description:
+// Store JNI env in Thread-specific data, allows automatic detachment
+// before thread exit.
+//
+static JNIEnv *attach_current_thread() {
+	JNIEnv *env=NULL;
+	jint res = gVM->AttachCurrentThread(&env, NULL);
+	return env;
+}
+
+static void detach_current_thread(void *env) {
+	gVM->DetachCurrentThread();
+}
+
+static JNIEnv *get_jni_env(void) {
+	JNIEnv *env;
+	if ((env = (JNIEnv*)pthread_getspecific(gCurrentJNIEnv)) == NULL) {
+		env = attach_current_thread();
+		pthread_setspecific(gCurrentJNIEnv, env);
+	}
+	return env;
+}
+
+
+JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
+{
+	JNIEnv *env = NULL;
+	gVM = vm;
+	if (gVM->GetEnv((void**)&env, JNI_VERSION_1_4) != JNI_OK) {
+		return 0;
+	}
+	pthread_key_create(&gCurrentJNIEnv, detach_current_thread);
+	return JNI_VERSION_1_4;
+}
+
+
 JNIEXPORT void JNICALL Java_se_m7n_android_libusb_LibUsb_setCallback(JNIEnv * env, jobject obj, jobject callback)
 {
 	__android_log_print(ANDROID_LOG_DEBUG, TAG, "setCallback\n");
-	jint res = env->GetJavaVM(&gVM);
-	printf("setCallback VM %d %p\n", res, gVM);
+	printf("setCallback VM %p\n", gVM);
 	gCallback = env->NewGlobalRef(callback);
 
 	jclass clsCallback = env->FindClass("se/m7n/android/libusb/LibUsb$Callback");
@@ -200,8 +243,7 @@ void libusb_exit(libusb_context *ctx)
 ssize_t libusb_get_device_list(libusb_context *ctx,
 	libusb_device ***list)
 {
-	JNIEnv *env=NULL;
-	jint res = gVM->AttachCurrentThread(&env, NULL);
+	JNIEnv *env = get_jni_env();
 
 	jobjectArray device_list = (jobjectArray)env->CallObjectMethod(gCallback, gid_getdevicelist);
 
@@ -243,8 +285,7 @@ void libusb_free_device_list(libusb_device **list, int unref_devices)
 	// // TODO skip free now
 	// return;
 
-	JNIEnv *env=NULL;
-	gVM->AttachCurrentThread(&env, NULL);
+	JNIEnv *env = get_jni_env();
 
 	while(list[num] != NULL) num++;
 
@@ -264,8 +305,7 @@ int libusb_get_device_descriptor(libusb_device *dev,
 	memset(desc, 0, sizeof(*desc));
 	desc->bLength = sizeof(*desc);
 
-	JNIEnv *env=NULL;
-	gVM->AttachCurrentThread(&env, NULL);
+	JNIEnv *env = get_jni_env();
 
 	jobject obj = dev->obj;
 	desc->idVendor = env->CallIntMethod(obj, gid_getvendorid);
@@ -293,8 +333,7 @@ uint8_t libusb_get_device_address(libusb_device *dev)
 	if (dev == NULL)
 		return LIBUSB_ERROR_INVALID_PARAM;
 
-	JNIEnv *env=NULL;
-	gVM->AttachCurrentThread(&env, NULL);
+	JNIEnv *env = get_jni_env();
 
 	jobject obj = dev->obj;
 	int addr = env->CallIntMethod(obj, gid_getdeviceid);
@@ -352,8 +391,7 @@ int libusb_bulk_transfer(libusb_device_handle *handle,
 	if (handle == NULL)
 		return LIBUSB_ERROR_INVALID_PARAM;
 
-	JNIEnv *env=NULL;
-	gVM->AttachCurrentThread(&env, NULL);
+	JNIEnv *env = get_jni_env();
 
 	jobject endpoint = NULL;
 	int dir = false;
@@ -407,8 +445,7 @@ int libusb_claim_interface(libusb_device_handle *handle, int iface)
 		return LIBUSB_ERROR_INVALID_PARAM;
 
 	int c=0;
-	JNIEnv *env=NULL;
-	gVM->AttachCurrentThread(&env, NULL);
+	JNIEnv *env = get_jni_env();
 
 	// Get interface
 	jobject interface = env->CallObjectMethod(handle->dev->obj, gid_getinterface, iface);
@@ -428,8 +465,7 @@ int libusb_release_interface(libusb_device_handle *handle, int iface)
 	if (handle == NULL)
 		return LIBUSB_ERROR_INVALID_PARAM;
 
-	JNIEnv *env=NULL;
-	gVM->AttachCurrentThread(&env, NULL);
+	JNIEnv *env = get_jni_env();
 
 	// Get interface
 	jobject interface = env->CallObjectMethod(handle->dev->obj, gid_getinterface, iface);
@@ -450,8 +486,7 @@ int libusb_control_transfer(libusb_device_handle *handle,
 	if (handle == NULL)
 		return LIBUSB_ERROR_INVALID_PARAM;
 
-	JNIEnv *env=NULL;
-	gVM->AttachCurrentThread(&env, NULL);
+	JNIEnv *env = get_jni_env();
 
 	jbyteArray buffer = env->NewByteArray(length);
 
@@ -485,8 +520,7 @@ int libusb_open(libusb_device *dev, libusb_device_handle **handle)
 	if (dev == NULL || handle == NULL)
 		return LIBUSB_ERROR_INVALID_PARAM;
 
-	JNIEnv *env=NULL;
-	gVM->AttachCurrentThread(&env, NULL);
+	JNIEnv *env = get_jni_env();
 
 	libusb_device_handle *handle_p = new libusb_device_handle;
 	memset(handle_p, 0, sizeof(*handle_p));
@@ -510,8 +544,7 @@ void libusb_close(libusb_device_handle *handle)
 	if (handle == NULL || handle->conn == NULL)
 		return;
 
-	JNIEnv *env=NULL;
-	gVM->AttachCurrentThread(&env, NULL);
+	JNIEnv *env = get_jni_env();
 
 	env->CallVoidMethod(handle->conn, gid_connclose);
 	env->DeleteGlobalRef(handle->conn);
@@ -536,8 +569,7 @@ libusb_device *libusb_ref_device(libusb_device *dev)
 
 void libusb_unref_device(libusb_device *dev)
 {
-	JNIEnv *env=NULL;
-	gVM->AttachCurrentThread(&env, NULL);
+	JNIEnv *env = get_jni_env();
 
 	printf("libusb_unref_device %p %d %p", dev, dev->refs, dev->obj);
 
@@ -556,8 +588,7 @@ struct libusb_transfer *libusb_alloc_transfer(int iso_packets)
 	if (iso_packets != 0)
 		return NULL;
 
-	JNIEnv *env=NULL;
-	gVM->AttachCurrentThread(&env, NULL);
+	JNIEnv *env = get_jni_env();
 
 	libusb_transfer_jni *transfer = new libusb_transfer_jni;
 	memset(transfer, 0, sizeof(*transfer));
@@ -593,8 +624,7 @@ int libusb_submit_transfer(struct libusb_transfer *a_transfer)
 	if (a_transfer == NULL)
 		return LIBUSB_ERROR_INVALID_PARAM;
 
-	JNIEnv *env=NULL;
-	gVM->AttachCurrentThread(&env, NULL);
+	JNIEnv *env = get_jni_env();
 
 	libusb_transfer_jni *transfer = (libusb_transfer_jni*)a_transfer;
 
@@ -654,8 +684,7 @@ void libusb_free_transfer(struct libusb_transfer *a_transfer)
 	if (a_transfer == NULL)
 		return;
 
-	JNIEnv *env=NULL;
-	gVM->AttachCurrentThread(&env, NULL);
+	JNIEnv *env = get_jni_env();
 
 	libusb_transfer_jni *transfer = (libusb_transfer_jni*)a_transfer;
 
@@ -705,8 +734,7 @@ int libusb_get_active_config_descriptor(libusb_device *dev,
 
 	config_p->bLength = sizeof(*config_p);
 
-	JNIEnv *env=NULL;
-	gVM->AttachCurrentThread(&env, NULL);
+	JNIEnv *env = get_jni_env();
 
 	jobject obj = dev->obj;
 	config_p->bNumInterfaces = env->CallIntMethod(obj, gid_getinterfacecount);
@@ -791,8 +819,7 @@ int libusb_handle_events(libusb_context *ctx)
 	// FIXME
 	printf("libusb_handle_events %p", ctx);
 
-	JNIEnv *env=NULL;
-	gVM->AttachCurrentThread(&env, NULL);
+	JNIEnv *env = get_jni_env();
 
 	std::vector<libusb_device_handle*>::iterator first = gOpened.begin();
 	std::vector<libusb_device_handle*>::iterator last = gOpened.end();
