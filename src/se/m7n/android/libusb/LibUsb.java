@@ -6,8 +6,10 @@ import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
-import android.os.Binder;
+import android.os.Bundle;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Message;
 import android.hardware.usb.UsbConstants;
 import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbDeviceConnection;
@@ -21,6 +23,11 @@ import org.openintents.smartcard.PCSCDaemon;
 
 public class LibUsb extends Service {
     public final static String TAG = "LibUsb";
+    protected static final int HANDLER_ATTACHED  = 1;
+    protected static final int HANDLER_DEATACHED = 2;
+    protected static final int HANDLER_HOTPLUG   = 3;
+    protected static final int HANDLER_PROXY     = 4;
+    protected static final int HANDLER_START     = 5;
 
     static {
         System.loadLibrary("usb");
@@ -33,6 +40,9 @@ public class LibUsb extends Service {
     private Callback mCallback;
     private boolean mIsStarted;
     private String mSocketName;
+    private Handler mHandler;
+    private boolean mIsAttached;
+    private Object mDevice;
     
     @Override
     public void onCreate() {
@@ -42,10 +52,56 @@ public class LibUsb extends Service {
         setCallback(mCallback);
 
         mIsStarted = false;
+        mIsAttached = false;
         mSocketName = toString();
 
         Log.d(TAG, "onCreate: " + mSocketName);
         // Setenv.setenv("test", "value", 1);
+
+        mHandler = new Handler(){
+            @Override
+            public void handleMessage(Message msg) {
+                    switch (msg.what) {
+                    case HANDLER_ATTACHED: {
+                        Log.d(TAG, "attached");
+                        // TODO protect with mutex?
+                        mIsAttached = true;
+                        // TODO improve synchronous start of daemons
+                        Message msg2 = mHandler.obtainMessage(HANDLER_START);
+                        mHandler.sendMessageDelayed(msg2, 1000);
+                        break;
+                    }
+                    case HANDLER_START: {
+                        Log.d(TAG, "pcscd start");
+                        // TODO protect with mutex?
+                        pcscmain();
+                        // TODO improve synchronous start of daemons
+                        Message msg2 = mHandler.obtainMessage(HANDLER_PROXY);
+                        mHandler.sendMessageDelayed(msg2, 1000);
+                        break;
+                    }
+                    case HANDLER_PROXY: {
+                        Log.d(TAG, "proxy start");
+                        // TODO protect with mutex?
+                        mIsStarted = true;
+                        pcscproxy();
+                        break;
+                    }
+                    case HANDLER_DEATACHED: {
+                        Log.d(TAG, "TODO pcscd stop");
+                        // TODO protect with mutex?
+                        mIsAttached = false;
+                        // TODO stop daemons
+                        break;
+                    }
+                    case HANDLER_HOTPLUG: {
+                        Log.d(TAG, "pcschotplug");
+                        pcschotplug();
+                        break;
+                    }
+                    }
+            }
+        };
     }
 
     @Override
@@ -79,13 +135,37 @@ public class LibUsb extends Service {
     private void start() {
         if (mIsStarted)
             return;
-        mIsStarted = true;
-        // pcscmain();
-        // pcscproxy();
+
+        Message msg = mHandler.obtainMessage(HANDLER_START);
+        mHandler.sendMessageDelayed(msg, 1000);
     }
 
     private void stop() {
         // FIXME
+    }
+
+    void setDevice(Object object, boolean start) {
+        int handler = -1;
+
+        if (start) {
+            mDevice = object;
+
+            if (!mIsAttached) {
+                handler = HANDLER_ATTACHED;
+            } else /* mIsAttached */ {
+                handler = HANDLER_HOTPLUG;
+            }
+        } else {
+            if (mIsAttached) {
+                handler = HANDLER_DEATACHED;
+            }
+            mDevice = object;
+        }
+
+        if (handler >= 0) {
+            Message msg = mHandler.obtainMessage(handler);
+            mHandler.sendMessageDelayed(msg, 500);
+        }
     }
 
     private final PCSCDaemon.Stub mBinder = new PCSCBinder();
@@ -251,6 +331,7 @@ public class LibUsb extends Service {
     native private void scardcontrol(Callback callback);
     native private void lsusb(Callback callback); 
     native private void pcscmain(Callback callback);
+    native public void pcschotplug();
     native private void pcscproxymain(Callback callback, String mSocketName);
     native private void setCallback(Callback callback); 
 }

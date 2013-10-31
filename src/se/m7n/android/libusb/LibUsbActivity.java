@@ -22,11 +22,11 @@ public class LibUsbActivity extends Activity
 {
     private static final String TAG = "LibUsb";
     protected static final int HANDLER_LSUSB = 1;
-    protected static final int HANDLER_PCSCD = 2;
     private Object mDevice;
     private TextView mStatus;
     private LibUsb mUsb;
     private Handler mHandler;
+    private boolean mStarted;
 
     /** Called when the activity is first created. */
     @Override
@@ -53,10 +53,6 @@ public class LibUsbActivity extends Activity
                     switch (msg.what) {
                     case HANDLER_LSUSB:
                         mUsb.lsusb();
-                        break;
-                    case HANDLER_PCSCD:
-                        Log.d(TAG, "pcscd start");
-                        mUsb.pcscmain();
                         break;
                     }
             }
@@ -122,10 +118,15 @@ public class LibUsbActivity extends Activity
         mDevice = object;
         if (!start) {
             mStatus.setText(R.string.disconnected);
-        } else {
+            mStarted = false;
+        } else if (!mStarted) {
             mStatus.setText(R.string.connected);
-            Message msg = mHandler.obtainMessage(HANDLER_PCSCD);
-            mHandler.sendMessageDelayed(msg, 500);
+            mStarted = true;
+        } else /* mStarted */ {
+        }
+
+        if (mUsb != null) {
+            mUsb.setDevice(object, start);
         }
     }
 
@@ -135,6 +136,9 @@ public class LibUsbActivity extends Activity
                 Log.d(TAG, "Bound " + className);
                 LibUsb.PCSCBinder binder = (LibUsb.PCSCBinder)service;
                 mUsb = binder.getService();
+                if (mStarted) {
+                    mUsb.setDevice(mDevice, true);
+                }
             }
             public void onServiceDisconnected(ComponentName className) {
                 mUsb = null;

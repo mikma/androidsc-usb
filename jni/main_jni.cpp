@@ -21,11 +21,17 @@ extern "C" {
 	JNIEXPORT void JNICALL Java_se_m7n_android_libusb_LibUsb_scardcontrol(JNIEnv * env, jobject obj, jobject callback);
 	JNIEXPORT void JNICALL Java_se_m7n_android_libusb_LibUsb_lsusb(JNIEnv * env, jobject obj, jobject callback);
 	JNIEXPORT void JNICALL Java_se_m7n_android_libusb_LibUsb_pcscmain(JNIEnv * env, jobject obj, jobject callback);
+	JNIEXPORT void JNICALL Java_se_m7n_android_libusb_LibUsb_pcschotplug(JNIEnv * env, jobject obj);
 	JNIEXPORT void JNICALL Java_se_m7n_android_libusb_LibUsb_pcscproxymain(JNIEnv * env, jobject obj, jobject callback, jstring socketName);
 	int main(int argc, char *argv[]);
+
+	// From pcsc-lite
 	int pcsc_main(int argc, char *argv[]);
-	int pcsc_proxy_main(int argc, char *argv[]);
+	int SendHotplugSignal(void);
 	int scardcontrol_main(int argc, char *argv[]);
+
+	// From pcsc-proxy
+	int pcsc_proxy_main(int argc, char *argv[]);
 };
 
 JNIEXPORT void JNICALL Java_se_m7n_android_libusb_LibUsb_scardcontrol(JNIEnv * env, jobject obj, jobject callback)
@@ -74,6 +80,17 @@ JNIEXPORT void JNICALL Java_se_m7n_android_libusb_LibUsb_pcscmain(JNIEnv * env, 
 	pcsc_main(argc, argv);
 #endif
 	__android_log_print(ANDROID_LOG_DEBUG, TAG, "After pcscd main");
+}
+
+JNIEXPORT void JNICALL Java_se_m7n_android_libusb_LibUsb_pcschotplug(JNIEnv * env, jobject obj)
+{
+	printf("Before pcschotplug");
+#ifdef COFFEE_TRY_JNI
+	COFFEE_TRY_JNI(env, SendHotplugSignal());
+#else
+	SendHotplugSignal();
+#endif
+	printf("After pcschotplug");
 }
 
 JNIEXPORT void JNICALL Java_se_m7n_android_libusb_LibUsb_pcscproxymain(JNIEnv * env, jobject obj, jobject callback, jstring socketName)
