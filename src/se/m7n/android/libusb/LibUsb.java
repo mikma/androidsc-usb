@@ -1,6 +1,8 @@
 package se.m7n.android.libusb;
 
 import java.nio.ByteBuffer;
+import java.util.Collection;
+import java.util.HashMap;
 
 import android.app.Service;
 import android.content.Context;
@@ -209,16 +211,37 @@ public class LibUsb extends Service {
             return (UsbManager) getSystemService(Context.USB_SERVICE);
         }
         public Object[] getDeviceList() {
+            if (mDevice != null)
+                return new Object[]{mDevice};
+            else
+                return new Object[0];
+        }
+        // TODO unused, remove
+        public Object[] getDeviceListX() {
             Log.d(TAG, "getDeviceList");
+            Log.d(TAG, "getDeviceList0");
             try {
-                Object[] list = getUsbManager().getDeviceList().values().toArray();
+                Log.d(TAG, "getDeviceList1");
+                UsbManager manager = getUsbManager();
+                Log.d(TAG, "getDeviceList2");
+                HashMap<String, UsbDevice> devList = manager.getDeviceList();
+                Log.d(TAG, "getDeviceList3");
+                Collection<UsbDevice> devices = devList.values();
+                Log.d(TAG, "getDeviceList4");
+                Object[] list = devices.toArray();
+                Log.d(TAG, "getDeviceList5");
+                // Object[] list = getUsbManager().getDeviceList().values().toArray();
                 for (int i=0;i<list.length;i++) {
                     UsbDevice dev = (UsbDevice)list[i];
                     Log.d(TAG, "Dev: " + dev + " " + dev.hashCode() + " " + dev.getVendorId() + " " + dev.getProductId() + " " + dev.getDeviceId() + " " + dev.getDeviceName());
                 }
+                Log.d(TAG, "getDeviceList returns " + list.length);
                 return list;
             } catch(Exception e) {
                 Log.d(TAG, "exception", e);
+                return null;
+            } catch(Throwable e) {
+                Log.d(TAG, "throwable", e);
                 return null;
             }
         }
