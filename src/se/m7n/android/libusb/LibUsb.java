@@ -26,7 +26,7 @@ import org.openintents.smartcard.PCSCDaemon;
 public class LibUsb extends Service {
     public final static String TAG = "LibUsb";
     protected static final int HANDLER_ATTACHED  = 1;
-    protected static final int HANDLER_DEATACHED = 2;
+    protected static final int HANDLER_DETACHED = 2;
     protected static final int HANDLER_HOTPLUG   = 3;
     protected static final int HANDLER_PROXY     = 4;
     protected static final int HANDLER_START     = 5;
@@ -89,9 +89,10 @@ public class LibUsb extends Service {
                         pcscproxy();
                         break;
                     }
-                    case HANDLER_DEATACHED: {
+                    case HANDLER_DETACHED: {
                         Log.d(TAG, "TODO pcscd stop");
                         // TODO protect with mutex?
+                        pcscstop();
                         mIsAttached = false;
                         // TODO stop daemons
                         break;
@@ -159,7 +160,7 @@ public class LibUsb extends Service {
             }
         } else {
             if (mIsAttached) {
-                handler = HANDLER_DEATACHED;
+                handler = HANDLER_DETACHED;
             }
             mDevice = object;
         }
@@ -354,6 +355,7 @@ public class LibUsb extends Service {
     native private void scardcontrol(Callback callback);
     native private void lsusb(Callback callback); 
     native private void pcscmain(Callback callback);
+    native private void pcscstop();
     native public void pcschotplug();
     native private void pcscproxymain(Callback callback, String mSocketName);
     native private void setCallback(Callback callback); 
