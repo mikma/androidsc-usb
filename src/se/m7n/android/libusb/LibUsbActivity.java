@@ -1,9 +1,16 @@
 package se.m7n.android.libusb;
 
+import java.util.HashMap;
+
 import android.app.Activity;
+import android.app.PendingIntent;
+import android.content.BroadcastReceiver;
 import android.content.ComponentName;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.ServiceConnection;
+import android.hardware.usb.UsbConstants;
 import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbManager;
 import android.os.Bundle;
@@ -21,18 +28,24 @@ import org.openintents.smartcard.PCSCDaemon;
 public class LibUsbActivity extends Activity
 {
     private static final String TAG = "LibUsb";
+    private static final String ACTION_USB_PERMISSION = "se.m7n.android.libusb.USB_PERMISSION";
     protected static final int HANDLER_LSUSB = 1;
     private Object mDevice;
     private TextView mStatus;
     private LibUsb mUsb;
     private Handler mHandler;
     private boolean mStarted;
+    private UsbManager mUsbManager;
 
     /** Called when the activity is first created. */
     @Override
     public void onCreate(Bundle savedInstanceState)
     {
+        Log.d(TAG, "onCreate " + savedInstanceState);
+
         super.onCreate(savedInstanceState);
+
+        mUsbManager = (UsbManager) getSystemService(Context.USB_SERVICE);
 
         setContentView(R.layout.main);
         mStatus = (TextView)this.findViewById(R.id.status);
@@ -57,11 +70,14 @@ public class LibUsbActivity extends Activity
                     }
             }
         };
+
+        mUsbReceiver.register();
     }
     
     @Override
     public void onDestroy()
     {
+        mUsbReceiver.unregister();
         unbindService(connection);
         super.onDestroy();
     }
@@ -99,10 +115,6 @@ public class LibUsbActivity extends Activity
         UsbDevice device = (UsbDevice)intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
         if (UsbManager.ACTION_USB_DEVICE_ATTACHED.equals(action)) {
             setDevice(device, true);
-        } else if (UsbManager.ACTION_USB_DEVICE_DETACHED.equals(action)) {
-            if (mDevice != null && mDevice.equals(device)) {
-                setDevice(null, false);
-            }
         } else {
             // Normal start
             setDevice(null, true);
@@ -115,6 +127,7 @@ public class LibUsbActivity extends Activity
     }
 
     private void setDevice(Object object, boolean start) {
+        Log.d(TAG, "setDevice started:" + mStarted + " start:" + start);
         mDevice = object;
         if (!start) {
             mStatus.setText(R.string.disconnected);
@@ -127,6 +140,64 @@ public class LibUsbActivity extends Activity
 
         if (mUsb != null) {
             mUsb.setDevice(object, start);
+        }
+    }
+
+    // TODO unused, remove
+    private UsbDevice findDevice() {
+        HashMap<String, UsbDevice> devList = mUsbManager.getDeviceList();
+
+        for (UsbDevice dev : devList.values()) {
+            Log.d(TAG, "Dev: " + dev + " " + dev.hashCode() + " " + dev.getVendorId() + " " + dev.getProductId() + " " + dev.getDeviceId() + " " + dev.getDeviceName());
+
+            if (dev.getDeviceClass() == UsbConstants.USB_CLASS_CSCID) {
+                return dev;
+            }
+        }
+        return null;
+    }
+
+    private UsbBroadcastReceiver mUsbReceiver = new UsbBroadcastReceiver();
+
+    private class UsbBroadcastReceiver extends BroadcastReceiver {
+        public void register() {
+            IntentFilter filter = new IntentFilter();
+
+            // filter.addAction(UsbManager.ACTION_USB_ACCESSORY_ATTACHED);
+            filter.addAction(UsbManager.ACTION_USB_ACCESSORY_DETACHED);
+            filter.addAction(ACTION_USB_PERMISSION);
+            registerReceiver(this, filter);
+            Log.d(TAG, "Register usb broadcast " + filter);
+        }
+        public void unregister() {
+            unregisterReceiver(this);
+        }
+
+        public void onReceive(Context context, Intent intent) {
+            String action = intent.getAction();
+
+            Log.d(TAG, "onReceive action:" + action + " intent:" + intent);
+
+            if (UsbManager.ACTION_USB_DEVICE_ATTACHED.equals(action)) {
+                UsbDevice device = (UsbDevice)intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
+                if (device != null && device.getDeviceClass() == UsbConstants.USB_CLASS_CSCID) {
+                    Intent permIntent = new Intent(ACTION_USB_PERMISSION);
+                    permIntent.putExtra(UsbManager.EXTRA_DEVICE,
+                                        device);
+                    PendingIntent pendIntent = PendingIntent.getBroadcast(LibUsbActivity.this, 0, permIntent, 0);
+                    mUsbManager.requestPermission(device, pendIntent);
+                }
+            } else if (ACTION_USB_PERMISSION.equals(action)) {
+                UsbDevice device = (UsbDevice)intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
+                if (device != null) {
+                    setDevice(device, false);
+                }
+            } else if (UsbManager.ACTION_USB_DEVICE_DETACHED.equals(action)) {
+                UsbDevice device = (UsbDevice)intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
+                if (device != null) {
+                    setDevice(null, false);
+                }
+            }
         }
     }
 
