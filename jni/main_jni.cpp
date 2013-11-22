@@ -11,8 +11,8 @@
 #include <string.h>
 #include <stdio.h>
 #include <unistd.h>
-#include "coffeecatch/coffeecatch.h"
-#include "coffeecatch/coffeejni.h"
+// #include "coffeecatch/coffeecatch.h"
+// #include "coffeecatch/coffeejni.h"
 
 #define TAG "libusb"
 

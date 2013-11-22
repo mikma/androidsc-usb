@@ -10,7 +10,9 @@ include $(CLEAR_VARS)
 
 LOCAL_MODULE    := usbjni
 LOCAL_CFLAGS	:= -I$(LOCAL_PATH)
-LOCAL_SRC_FILES := main_jni.cpp
+# Needed for coffeecatch
+LOCAL_CFLAGS += -g -funwind-tables -Wl,--no-merge-exidx-entries
+LOCAL_SRC_FILES := main_jni.cpp lsusb.c coffeecatch/coffeecatch.c coffeecatch/coffeejni.c
 LOCAL_LDLIBS	:= -llog
 #LOCAL_PRELINK_MODULE := false
 LOCAL_SHARED_LIBRARIES := pcscd libscardcontrol libpcsc libpcscproxy
