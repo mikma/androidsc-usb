@@ -42,6 +42,9 @@ jclass gClsRequest;
 jclass gClsLong;
 jclass gClsByteBuffer;
 
+// Object
+jmethodID gid_tostring;
+
 // Callback
 jmethodID gid_findendpoint;
 jmethodID gid_submittransfer;
@@ -163,6 +166,7 @@ JNIEXPORT void JNICALL Java_se_m7n_android_libusb_LibUsb_setCallback(JNIEnv * en
 	gClsRequest = (jclass)env->NewGlobalRef(env->FindClass("android/hardware/usb/UsbRequest"));
 	gClsLong = (jclass)env->NewGlobalRef(env->FindClass("java/lang/Long"));
 	gClsByteBuffer = (jclass)env->NewGlobalRef(env->FindClass("java/nio/ByteBuffer"));
+	jclass clsObject = env->FindClass("java/lang/Object");
 
 	gid_getdevicelist = env->GetMethodID(clsCallback, "getDeviceList", "()[Ljava/lang/Object;");
 
@@ -227,6 +231,11 @@ JNIEXPORT void JNICALL Java_se_m7n_android_libusb_LibUsb_setCallback(JNIEnv * en
 	gid_limit = env->GetMethodID(gClsByteBuffer, "limit", "()I");
 	gid_position = env->GetMethodID(gClsByteBuffer, "position", "()I");
 	gid_capacity = env->GetMethodID(gClsByteBuffer, "capacity", "()I");
+
+	// Object
+	gid_tostring = env->GetMethodID(clsObject, "toString", "()Ljava/lang/String;");
+
+	// TODO free classes?
 }
 
 int libusb_init(libusb_context **ctx)
@@ -245,7 +254,21 @@ ssize_t libusb_get_device_list(libusb_context *ctx,
 {
 	JNIEnv *env = get_jni_env();
 
+	printf("call getdevicelist\n");
 	jobjectArray device_list = (jobjectArray)env->CallObjectMethod(gCallback, gid_getdevicelist);
+	printf("return getdevicelist %p\n", device_list);
+
+	if (env->ExceptionCheck() == JNI_TRUE) {
+		jthrowable exceptionObj = env->ExceptionOccurred();
+		printf("Exception! %p", exceptionObj);
+
+		env->ExceptionDescribe();
+		return LIBUSB_ERROR_OTHER;
+		// jstring str = (jstring)env->CallObjectMethod(exceptionObj, gid_tostring);
+		// char *utf8 = (char*)env->GetStringUTFChars(str, NULL);
+		// printf("Exception text! '%s'", utf8);
+		// env->ReleaseStringUTFChars(str, utf8);
+	}
 
 	int num = env->GetArrayLength(device_list);
 	libusb_device **list_p = new libusb_device*[num+1];
@@ -591,6 +614,7 @@ struct libusb_transfer *libusb_alloc_transfer(int iso_packets)
 	JNIEnv *env = get_jni_env();
 
 	libusb_transfer_jni *transfer = new libusb_transfer_jni;
+	printf("libusb_alloc_transfer %p", transfer);
 	memset(transfer, 0, sizeof(*transfer));
 	transfer->req = env->NewGlobalRef(env->NewObject(gClsRequest, gid_newrequest));
 
