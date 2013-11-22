@@ -21,6 +21,9 @@
 #include <sys/types.h>
 
 #include <libusb/libusb.h>
+#include <android/log.h>
+
+#define TAG "lsusb"
 
 void print_devs(libusb_device **devs)
 {
@@ -34,6 +37,12 @@ void print_devs(libusb_device **devs)
 			fprintf(stderr, "failed to get device descriptor");
 			return;
 		}
+
+                __android_log_print(ANDROID_LOG_DEBUG, TAG,
+                                    "%04x:%04x (bus %d, device %d)\n",
+                                    desc.idVendor, desc.idProduct,
+                                    libusb_get_bus_number(dev),
+                                    libusb_get_device_address(dev));
 
 		printf("%04x:%04x (bus %d, device %d)\n",
 			desc.idVendor, desc.idProduct,
@@ -53,8 +62,10 @@ int main(void)
 		return r;
 
 	cnt = libusb_get_device_list(NULL, &devs);
-	if (cnt < 0)
+	if (cnt < 0) {
+		printf("no devices found");
 		return (int) cnt;
+	}
 
 	print_devs(devs);
 	libusb_free_device_list(devs, 1);
