@@ -150,6 +150,8 @@ public class LibUsb extends Service {
     void setDevice(Object object, boolean start) {
         int handler = -1;
 
+        Log.d(TAG, "setDevice " + start + ": " + object);
+
         if (start) {
             mDevice = object;
 
@@ -212,10 +214,18 @@ public class LibUsb extends Service {
             return (UsbManager) getSystemService(Context.USB_SERVICE);
         }
         public Object[] getDeviceList() {
-            if (mDevice != null)
-                return new Object[]{mDevice};
-            else
+            if (mDevice == null)
                 return new Object[0];
+
+            UsbManager manager = getUsbManager();
+            HashMap<String, UsbDevice> devList = manager.getDeviceList();
+
+            if (devList.containsValue(mDevice))
+                return new Object[]{mDevice};
+
+            // USB device detached
+            setDevice(null, false);
+            return new Object[0];
         }
         // TODO unused, remove
         public Object[] getDeviceListX() {
