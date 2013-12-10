@@ -53,6 +53,7 @@ public class LibUsbActivity extends Activity
         ((Button)this.findViewById(R.id.start_pcscproxy)).setOnClickListener(mStartPcscProxy);
         ((Button)this.findViewById(R.id.start_lsusb)).setOnClickListener(mStartLsusb);
         ((Button)this.findViewById(R.id.start_pcscd)).setOnClickListener(mStartPcscd);
+        ((Button)this.findViewById(R.id.stop_pcscd)).setOnClickListener(mStopPcscd);
         
         //mUsb = new LibUsb(this);
         //mUsb.pcscmain();
@@ -101,6 +102,11 @@ public class LibUsbActivity extends Activity
     OnClickListener mStartPcscd = new OnClickListener() {
         public void onClick(View v) {
             mUsb.pcscmain();
+        }
+    };
+    OnClickListener mStopPcscd = new OnClickListener() {
+        public void onClick(View v) {
+            mUsb.pcscstop();
         }
     };
 

@@ -365,7 +365,7 @@ public class LibUsb extends Service {
     native private void scardcontrol(Callback callback);
     native private void lsusb(Callback callback); 
     native private void pcscmain(Callback callback);
-    native private void pcscstop();
+    native public void pcscstop();
     native public void pcschotplug();
     native private void pcscproxymain(Callback callback, String mSocketName);
     native private void setCallback(Callback callback); 

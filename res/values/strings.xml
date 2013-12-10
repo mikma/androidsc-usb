@@ -10,4 +10,5 @@
     <string name="pcsc_daemon_permission_desc">Allows the application to access a smart card.</string>
     <string name="start_lsusb">Start lsusb</string>
     <string name="start_pcscd">Start pcscd</string>
+    <string name="stop_pcscd">Stop pcscd</string>
 </resources>
