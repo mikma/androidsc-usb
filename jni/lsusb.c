@@ -20,7 +20,7 @@
 #include <stdio.h>
 #include <sys/types.h>
 
-#include <libusb/libusb.h>
+#include <libusb.h>
 #include <android/log.h>
 
 #define TAG "lsusb"
