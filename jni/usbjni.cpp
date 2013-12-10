@@ -85,6 +85,7 @@ jmethodID gid_bulktransfer;
 jmethodID gid_requestwait;
 
 // UsbRequest
+jmethodID gid_cancel;
 jmethodID gid_newrequest;
 jmethodID gid_setclientdata;
 jmethodID gid_getclientdata;
@@ -212,6 +213,7 @@ JNIEXPORT void JNICALL Java_se_m7n_android_libusb_LibUsb_setCallback(JNIEnv * en
 	gid_interval = env->GetMethodID(clsEndpoint, "getInterval", "()I");;
 
 	// UsbRequest
+	gid_cancel = env->GetMethodID(gClsRequest, "cancel", "()Z");
 	gid_newrequest = env->GetMethodID(gClsRequest, "<init>", "()V");
 	gid_setclientdata = env->GetMethodID(gClsRequest, "setClientData", "(Ljava/lang/Object;)V");
 	gid_getclientdata = env->GetMethodID(gClsRequest, "getClientData", "()Ljava/lang/Object;");
@@ -614,9 +616,9 @@ struct libusb_transfer *libusb_alloc_transfer(int iso_packets)
 	JNIEnv *env = get_jni_env();
 
 	libusb_transfer_jni *transfer = new libusb_transfer_jni;
-	printf("libusb_alloc_transfer %p", transfer);
 	memset(transfer, 0, sizeof(*transfer));
 	transfer->req = env->NewGlobalRef(env->NewObject(gClsRequest, gid_newrequest));
+	printf("libusb_alloc_transfer %p %p", transfer, transfer->req);
 
 	jobject object = env->NewObject(gClsLong, gid_newlong, (jlong)transfer);
 	if (object == NULL) {
@@ -654,9 +656,12 @@ int libusb_submit_transfer(struct libusb_transfer *a_transfer)
 
 	transfer->buffer_obj = env->NewGlobalRef(env->CallStaticObjectMethod(gClsByteBuffer, gid_allocatedirect, transfer->length));
 
-	printf("libusb_submit_transfer %d %p", c++, transfer->buffer_obj);
+	printf("libusb_submit_transfer %d %p %p %p", c++, transfer, transfer->req, transfer->buffer_obj);
 
-	if (env->CallObjectMethod(gCallback, gid_submittransfer, transfer->dev_handle->conn, transfer->dev_handle->dev->obj, transfer->req, transfer->buffer_obj, transfer->endpoint, transfer->length))
+	bool res = env->CallObjectMethod(gCallback, gid_submittransfer, transfer->dev_handle->conn, transfer->dev_handle->dev->obj, transfer->req, transfer->buffer_obj, transfer->endpoint, transfer->length);
+
+	printf("libusb_submit_transfer res %d %p", res, transfer);
+	if (res)
 		return LIBUSB_SUCCESS;
 	else
 		return LIBUSB_ERROR_IO;
@@ -695,11 +700,27 @@ int libusb_submit_transfer(struct libusb_transfer *a_transfer)
 	return LIBUSB_SUCCESS;
 }
 
-int libusb_cancel_transfer(struct libusb_transfer *transfer)
+int libusb_cancel_transfer(struct libusb_transfer *a_transfer)
 {
-	// FIXME
-	printf("libusb_cancel_transfer %p", transfer);
-	return LIBUSB_ERROR_OTHER;
+	if (a_transfer == NULL)
+		return LIBUSB_ERROR_INVALID_PARAM;
+
+	JNIEnv *env = get_jni_env();
+
+	libusb_transfer_jni *transfer = (libusb_transfer_jni*)a_transfer;
+	printf("libusb_cancel_transfer %p %p", transfer, transfer->req);
+
+        if (!transfer->req)
+		return LIBUSB_ERROR_OTHER;
+
+	bool res = env->CallBooleanMethod(transfer->req, gid_cancel);
+
+	printf("libusb_cancel_transfer res %d", res);
+
+	if (res)
+		return LIBUSB_SUCCESS;
+	else
+		return LIBUSB_ERROR_OTHER;
 }
 
 void libusb_free_transfer(struct libusb_transfer *a_transfer)
