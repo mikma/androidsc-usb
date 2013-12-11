@@ -21,6 +21,8 @@ import android.hardware.usb.UsbManager;
 import android.hardware.usb.UsbRequest;
 import android.util.Log;
 
+import org.libusb.UsbHelper;
+
 import org.openintents.smartcard.PCSCDaemon;
 
 public class LibUsb extends Service {
@@ -50,8 +52,10 @@ public class LibUsb extends Service {
     public void onCreate() {
         super.onCreate();
 
+        UsbHelper.useContext(this);
+
         mCallback = new Callback();
-        setCallback(mCallback);
+        //setCallback(mCallback);
 
         mIsStarted = false;
         mIsAttached = false;
