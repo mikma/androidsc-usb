@@ -12,6 +12,7 @@ import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.hardware.usb.UsbConstants;
 import android.hardware.usb.UsbDevice;
+import android.hardware.usb.UsbInterface;
 import android.hardware.usb.UsbManager;
 import android.os.Bundle;
 import android.os.Handler;
@@ -133,7 +134,7 @@ public class LibUsbActivity extends Activity
     }
 
     private void setDevice(Object object, boolean start) {
-        Log.d(TAG, "setDevice started:" + mStarted + " start:" + start);
+        Log.d(TAG, "setDevice started:" + mStarted + " device:" + object + " start:" + start);
         mDevice = object;
         if (!start) {
             mStatus.setText(R.string.disconnected);
@@ -163,14 +164,36 @@ public class LibUsbActivity extends Activity
         return null;
     }
 
+    private boolean isCSCID(UsbDevice device) {
+        if (device.getDeviceClass() == UsbConstants.USB_CLASS_CSCID)
+            return true;
+
+        int count = device.getInterfaceCount();
+        for (int i=0; i<count; i++) {
+            UsbInterface iface = device.getInterface(i);
+            if (iface == null) {
+                Log.d(TAG, "isCSCID null interface");
+                continue;
+            }
+
+            Log.d(TAG, "isCSCID iface class:" + iface.getInterfaceClass());
+
+            if (iface.getInterfaceClass() == UsbConstants.USB_CLASS_CSCID) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private UsbBroadcastReceiver mUsbReceiver = new UsbBroadcastReceiver();
 
     private class UsbBroadcastReceiver extends BroadcastReceiver {
         public void register() {
             IntentFilter filter = new IntentFilter();
 
-            // filter.addAction(UsbManager.ACTION_USB_ACCESSORY_ATTACHED);
-            filter.addAction(UsbManager.ACTION_USB_ACCESSORY_DETACHED);
+            filter.addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED);
+            filter.addAction(UsbManager.ACTION_USB_DEVICE_DETACHED);
             filter.addAction(ACTION_USB_PERMISSION);
             registerReceiver(this, filter);
             Log.d(TAG, "Register usb broadcast " + filter);
@@ -181,12 +204,13 @@ public class LibUsbActivity extends Activity
 
         public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
+            UsbDevice device = (UsbDevice)intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
 
-            Log.d(TAG, "onReceive action:" + action + " intent:" + intent);
+            Log.d(TAG, "onReceive action:" + action + " intent:" + intent + " dev:" + device);
 
             if (UsbManager.ACTION_USB_DEVICE_ATTACHED.equals(action)) {
-                UsbDevice device = (UsbDevice)intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
-                if (device != null && device.getDeviceClass() == UsbConstants.USB_CLASS_CSCID) {
+                if (device != null && isCSCID(device)) {
+                    Log.d(TAG, "onReceive request perm");
                     Intent permIntent = new Intent(ACTION_USB_PERMISSION);
                     permIntent.putExtra(UsbManager.EXTRA_DEVICE,
                                         device);
@@ -194,12 +218,12 @@ public class LibUsbActivity extends Activity
                     mUsbManager.requestPermission(device, pendIntent);
                 }
             } else if (ACTION_USB_PERMISSION.equals(action)) {
-                UsbDevice device = (UsbDevice)intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
                 if (device != null) {
-                    setDevice(device, false);
+                    Log.d(TAG, "onReceive perm:" + device);
+                    // TODO change start to hotplug
+                    setDevice(device, true);
                 }
             } else if (UsbManager.ACTION_USB_DEVICE_DETACHED.equals(action)) {
-                UsbDevice device = (UsbDevice)intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
                 if (device != null) {
                     setDevice(null, false);
                 }
