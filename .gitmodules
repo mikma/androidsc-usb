@@ -1,6 +1,9 @@
 [submodule "jni/ccid"]
 	path = jni/ccid
 	url = git://git.m7n.se/pub/ccid.git
+[submodule "jni/libusb"]
+	path = jni/libusb
+	url = git://git.m7n.se/pub/libusb.git
 [submodule "jni/pcsc-lite"]
 	path = jni/pcsc-lite
         url = git://git.m7n.se/pub/pcsc-lite.git
