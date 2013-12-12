@@ -12,4 +12,5 @@
     <string name="start_pcscd">Start pcscd</string>
     <string name="stop_pcscd">Stop pcscd</string>
     <string name="stop_pcscproxy">Stop pcsc-proxy</string>
+    <string name="attached_name">AttachedActivity</string>
 </resources>
