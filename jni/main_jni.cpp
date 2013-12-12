@@ -24,6 +24,7 @@ extern "C" {
 	JNIEXPORT void JNICALL Java_se_m7n_android_libusb_LibUsb_pcscstop(JNIEnv * env, jobject obj);
 	JNIEXPORT void JNICALL Java_se_m7n_android_libusb_LibUsb_pcschotplug(JNIEnv * env, jobject obj);
 	JNIEXPORT void JNICALL Java_se_m7n_android_libusb_LibUsb_pcscproxymain(JNIEnv * env, jobject obj, jobject callback, jstring socketName);
+	JNIEXPORT jint JNICALL Java_se_m7n_android_libusb_LibUsb_pcscproxystop(JNIEnv * env, jobject obj);
 	int main(int argc, char *argv[]);
 
 	// From pcsc-lite
@@ -34,6 +35,7 @@ extern "C" {
 
 	// From pcsc-proxy
 	int pcsc_proxy_main(int argc, char *argv[]);
+	int pp_stop();
 };
 
 JNIEXPORT void JNICALL Java_se_m7n_android_libusb_LibUsb_scardcontrol(JNIEnv * env, jobject obj, jobject callback)
@@ -127,4 +129,9 @@ JNIEXPORT void JNICALL Java_se_m7n_android_libusb_LibUsb_pcscproxymain(JNIEnv * 
 #endif
 	__android_log_print(ANDROID_LOG_DEBUG, TAG, "After pcsc-proxy main");
 	env->ReleaseStringUTFChars(socketName, utf8Name);
+}
+
+JNIEXPORT jint JNICALL Java_se_m7n_android_libusb_LibUsb_pcscproxystop(JNIEnv * env, jobject obj)
+{
+	return pp_stop();
 }

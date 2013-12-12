@@ -92,7 +92,7 @@ public class LibUsbActivity extends Activity
 
     OnClickListener mStartPcscProxy = new OnClickListener() {
         public void onClick(View v) {
-            mUsb.pcscproxy();
+            mUsb.startPcscproxy();
         }
     };
     OnClickListener mStartLsusb = new OnClickListener() {

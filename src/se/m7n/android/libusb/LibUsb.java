@@ -47,6 +47,7 @@ public class LibUsb extends Service {
     private Handler mHandler;
     private boolean mIsAttached;
     private Object mDevice;
+    private PcscproxyThread mPcscproxy;
     
     @Override
     public void onCreate() {
@@ -90,13 +91,14 @@ public class LibUsb extends Service {
                         Log.d(TAG, "proxy start");
                         // TODO protect with mutex?
                         mIsStarted = true;
-                        pcscproxy();
+                        startPcscproxy();
                         break;
                     }
                     case HANDLER_DETACHED: {
                         Log.d(TAG, "TODO pcscd stop");
                         // TODO protect with mutex?
                         pcscstop();
+                        stopPcscproxy();
                         mIsAttached = false;
                         // TODO stop daemons
                         break;
@@ -349,13 +351,41 @@ public class LibUsb extends Service {
             }
         }, "pcscmain").start();
     }
-    
-    public void pcscproxy() {
-        new Thread(new Runnable() {
-            public void run() {
-                pcscproxymain(mCallback, mSocketName);
-            }
-        }, "pcscproxy").start();
+
+    class PcscproxyThread extends Thread {
+        public PcscproxyThread() {
+            super("pcscproxy");
+        }
+        public void run() {
+            pcscproxymain(mCallback, mSocketName);
+        }
+    }
+
+    public void startPcscproxy() {
+        if (mPcscproxy != null) {
+            Log.e(TAG, "pcscproxy already started");
+            return;
+        }
+
+        mPcscproxy = new PcscproxyThread();
+        mPcscproxy.start();
+    }
+
+    public void stopPcscproxy() {
+        if (mPcscproxy == null) {
+            Log.e(TAG, "pcscproxy already stopped");
+            return;
+        }
+
+        Log.i(TAG, "pcscproxy stopping");
+        pcscproxystop();
+        try {
+            mPcscproxy.join(1000);
+        } catch(InterruptedException e) {
+            Log.e(TAG, "pcscproxy join interrupted", e);
+        }
+        Log.i(TAG, "pcscproxy stopped");
+        mPcscproxy = null;
     }
 
     public void scardcontrol() {
@@ -372,5 +402,6 @@ public class LibUsb extends Service {
     native public void pcscstop();
     native public void pcschotplug();
     native private void pcscproxymain(Callback callback, String mSocketName);
+    native private int pcscproxystop();
     native private void setCallback(Callback callback); 
 }
