@@ -1,5 +1,10 @@
 package se.m7n.android.libusb;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.HashMap;
@@ -30,6 +35,11 @@ import org.openintents.smartcard.PCSCDaemon;
 
 public class LibUsb extends Service {
     public final static String TAG = "LibUsb";
+    public static final String INFO_PLIST = "Info.plist";
+    public static final String PATH_USB = "usb";
+    public static final String PATH_IPC = "ipc";
+    public static final String PATH_BUNDLE = "ifd-ccid.bundle";
+    public static final String PATH_CONTENTS = "Contents";
     protected static final int HANDLER_ATTACHED  = 1;
     protected static final int HANDLER_DETACHED  = 2;
     protected static final int HANDLER_HOTPLUG   = 3;
@@ -71,6 +81,12 @@ public class LibUsb extends Service {
 
         Log.d(TAG, "onCreate: " + mSocketName);
         // Setenv.setenv("test", "value", 1);
+
+        try {
+            copyAssets();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
 
         mHandler = new Handler(){
             @Override
@@ -214,6 +230,38 @@ public class LibUsb extends Service {
             Message msg = mHandler.obtainMessage(handler);
             mHandler.sendMessageDelayed(msg, 500);
         }
+    }
+
+    /** Copy one asset */
+    private void copyAsset(String fileName, File destDir) throws IOException {
+        Log.d(TAG, "copyAsset " + fileName + " " + destDir);
+        InputStream is = null;
+        OutputStream os = null;
+        try {
+            is = getAssets().open(fileName);
+            destDir.mkdirs();
+            os = new FileOutputStream(new File(destDir, fileName));
+            byte[] buf = new byte[1024];
+            int res;
+
+            while ((res = is.read(buf)) >= 0) {
+                os.write(buf, 0, res);
+            }
+        } finally {
+            if (is != null)
+                is.close();
+            if (os != null)
+                os.close();
+        }
+    }
+
+    /** Copy assets and make directories  */
+    private void copyAssets() throws IOException {
+        String infoFilename = INFO_PLIST;
+        File contentsDir = new File (new File(new File(getFilesDir(), PATH_USB), PATH_BUNDLE), PATH_CONTENTS);
+        File infoFile = new File(contentsDir, infoFilename);
+        copyAsset(infoFilename, contentsDir);
+        new File(getFilesDir(), PATH_IPC).mkdir();
     }
 
     private final PCSCDaemon.Stub mBinder = new PCSCBinder();

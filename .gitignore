@@ -2,6 +2,8 @@ jni/ccid.bak/
 jni/pcsc-lite.bak/
 jni/pcsc-proxy.bak/
 
+assets/Info.plist
+
 bin/
 gen/
 libs/
