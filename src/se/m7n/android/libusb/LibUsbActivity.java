@@ -102,12 +102,12 @@ public class LibUsbActivity extends Activity
     };
     OnClickListener mStartPcscd = new OnClickListener() {
         public void onClick(View v) {
-            mUsb.pcscmain();
+            mUsb.startPcscd();
         }
     };
     OnClickListener mStopPcscd = new OnClickListener() {
         public void onClick(View v) {
-            mUsb.pcscstop();
+            mUsb.stopPcscd();
         }
     };
 

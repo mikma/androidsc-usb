@@ -48,6 +48,7 @@ public class LibUsb extends Service {
     private boolean mIsAttached;
     private Object mDevice;
     private PcscproxyThread mPcscproxy;
+    private PcscdThread mPcscd;
     
     @Override
     public void onCreate() {
@@ -81,7 +82,7 @@ public class LibUsb extends Service {
                     case HANDLER_START: {
                         Log.d(TAG, "pcscd start");
                         // TODO protect with mutex?
-                        pcscmain();
+                        startPcscd();
                         // TODO improve synchronous start of daemons
                         Message msg2 = mHandler.obtainMessage(HANDLER_PROXY);
                         mHandler.sendMessageDelayed(msg2, 1000);
@@ -95,12 +96,12 @@ public class LibUsb extends Service {
                         break;
                     }
                     case HANDLER_DETACHED: {
-                        Log.d(TAG, "TODO pcscd stop");
                         // TODO protect with mutex?
-                        pcscstop();
+                        Log.d(TAG, "proxy stop");
                         stopPcscproxy();
+                        Log.d(TAG, "pcscd stop");
+                        stopPcscd();
                         mIsAttached = false;
-                        // TODO stop daemons
                         break;
                     }
                     case HANDLER_HOTPLUG: {
@@ -344,12 +345,40 @@ public class LibUsb extends Service {
 
     }
 
-    public void pcscmain() {
-        new Thread(new Runnable() {
-            public void run() {
-                pcscmain(mCallback);
-            }
-        }, "pcscmain").start();
+    class PcscdThread extends Thread {
+        public PcscdThread() {
+            super("pcscd");
+        }
+        public void run() {
+            pcscmain(mCallback);
+        }
+    }
+
+    public void startPcscd() {
+        if (mPcscd != null) {
+            Log.e(TAG, "pcscd already started");
+            return;
+        }
+
+        mPcscd = new PcscdThread();
+        mPcscd.start();
+    }
+
+    public void stopPcscd() {
+        if (mPcscd == null) {
+            Log.e(TAG, "pcscd already stopped");
+            return;
+        }
+
+        Log.i(TAG, "pcscd stopping");
+        pcscstop();
+        try {
+            mPcscd.join(5000);
+        } catch(InterruptedException e) {
+            Log.e(TAG, "pcscd join interrupted", e);
+        }
+        Log.i(TAG, "pcscd stopped");
+        mPcscd = null;
     }
 
     class PcscproxyThread extends Thread {
@@ -399,7 +428,7 @@ public class LibUsb extends Service {
     native private void scardcontrol(Callback callback);
     native private void lsusb(Callback callback); 
     native private void pcscmain(Callback callback);
-    native public void pcscstop();
+    native private void pcscstop();
     native public void pcschotplug();
     native private void pcscproxymain(Callback callback, String mSocketName);
     native private int pcscproxystop();
