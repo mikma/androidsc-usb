@@ -3,6 +3,9 @@ package se.m7n.android.libusb;
 import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import android.app.Service;
 import android.content.Context;
@@ -28,10 +31,11 @@ import org.openintents.smartcard.PCSCDaemon;
 public class LibUsb extends Service {
     public final static String TAG = "LibUsb";
     protected static final int HANDLER_ATTACHED  = 1;
-    protected static final int HANDLER_DETACHED = 2;
+    protected static final int HANDLER_DETACHED  = 2;
     protected static final int HANDLER_HOTPLUG   = 3;
     protected static final int HANDLER_PROXY     = 4;
     protected static final int HANDLER_START     = 5;
+    protected static final int HANDLER_READY     = 6;
 
     static {
         System.loadLibrary("usb");
@@ -45,10 +49,12 @@ public class LibUsb extends Service {
     private boolean mIsStarted;
     private String mSocketName;
     private Handler mHandler;
-    private boolean mIsAttached;
     private Object mDevice;
     private PcscproxyThread mPcscproxy;
     private PcscdThread mPcscd;
+    private int mRefCount;
+    final private Lock startLock = new ReentrantLock();
+    final private Condition startInitialized = startLock.newCondition();
     
     @Override
     public void onCreate() {
@@ -56,11 +62,11 @@ public class LibUsb extends Service {
 
         UsbHelper.useContext(this);
 
+        mRefCount = 0;
         mCallback = new Callback();
         //setCallback(mCallback);
 
         mIsStarted = false;
-        mIsAttached = false;
         mSocketName = toString();
 
         Log.d(TAG, "onCreate: " + mSocketName);
@@ -72,8 +78,6 @@ public class LibUsb extends Service {
                     switch (msg.what) {
                     case HANDLER_ATTACHED: {
                         Log.d(TAG, "attached");
-                        // TODO protect with mutex?
-                        mIsAttached = true;
                         // TODO improve synchronous start of daemons
                         Message msg2 = mHandler.obtainMessage(HANDLER_START);
                         mHandler.sendMessageDelayed(msg2, 1000);
@@ -90,9 +94,19 @@ public class LibUsb extends Service {
                     }
                     case HANDLER_PROXY: {
                         Log.d(TAG, "proxy start");
-                        // TODO protect with mutex?
-                        mIsStarted = true;
                         startPcscproxy();
+                        break;
+                    }
+                    case HANDLER_READY: {
+                        Log.d(TAG, "ready");
+                        try {
+                            startLock.lock();
+                            Log.d(TAG, "Signal initialized");
+                            mIsStarted = true;
+                            startInitialized.signalAll();
+                        } finally {
+                            startLock.unlock();
+                        }
                         break;
                     }
                     case HANDLER_DETACHED: {
@@ -101,7 +115,6 @@ public class LibUsb extends Service {
                         stopPcscproxy();
                         Log.d(TAG, "pcscd stop");
                         stopPcscd();
-                        mIsAttached = false;
                         break;
                     }
                     case HANDLER_HOTPLUG: {
@@ -119,9 +132,11 @@ public class LibUsb extends Service {
         super.onDestroy();
 
         Log.d(TAG, "onDestroy");
-        if (mIsStarted) {
-            // TODO stop pcsc-proxy
-        }
+
+        Log.d(TAG, "proxy stop");
+        stopPcscproxy();
+        Log.d(TAG, "pcscd stop");
+        stopPcscd();
     }
 
     @Override
@@ -143,7 +158,8 @@ public class LibUsb extends Service {
     }
 
     private void start() {
-        if (mIsStarted)
+        mRefCount++;
+        if (mRefCount > 1)
             return;
 
         Message msg = mHandler.obtainMessage(HANDLER_START);
@@ -151,7 +167,27 @@ public class LibUsb extends Service {
     }
 
     private void stop() {
+        mRefCount--;
+        if (mRefCount > 0)
+            return;
         // FIXME
+    }
+
+    private boolean waitStart() {
+        try {
+            startLock.lock();
+            while (!isStarted()) {
+                Log.d(TAG, "waitStart");
+                startInitialized.await();
+            }
+            Log.d(TAG, "ready");
+            return true;
+        } catch (InterruptedException e) {
+            Log.e(TAG, "interrupted");
+            return false;
+        } finally {
+            startLock.unlock();
+        }
     }
 
     void setDevice(Object object, boolean start) {
@@ -162,13 +198,13 @@ public class LibUsb extends Service {
         if (start) {
             mDevice = object;
 
-            if (!mIsAttached) {
+            if (mPcscd == null) {
                 handler = HANDLER_ATTACHED;
-            } else /* mIsAttached */ {
+            } else /* mPcscd != null */ {
                 handler = HANDLER_HOTPLUG;
             }
         } else {
-            if (mIsAttached) {
+            if (mPcscd != null) {
                 handler = HANDLER_DETACHED;
             }
             mDevice = object;
@@ -189,24 +225,18 @@ public class LibUsb extends Service {
 
         public boolean start() {
             Log.d(TAG, "start " + String.format("pid:%d uid:%d", getCallingPid(), getCallingUid()));
-            if (isStarted()) {
-                Log.e(TAG, "Already started");
-                return false;
-            }
             LibUsb.this.start();
             return true;
         }
         public void stop() {
-            if (isStarted()) {
-                LibUsb.this.stop();
-            } else {
-                Log.e(TAG, "Not started");
-            }
+            LibUsb.this.stop();
         }
         public String getLocalSocketAddress() {
             if (!isStarted()) {
-                Log.e(TAG, "Not started");
-                return null;
+                if (!waitStart()) {
+                    Log.e(TAG, "Not started");
+                    return null;
+                }
             }
 
             return mSocketName;
@@ -386,6 +416,8 @@ public class LibUsb extends Service {
             super("pcscproxy");
         }
         public void run() {
+            Message msg = mHandler.obtainMessage(HANDLER_READY);
+            mHandler.sendMessageDelayed(msg, 1000);
             pcscproxymain(mCallback, mSocketName);
         }
     }
