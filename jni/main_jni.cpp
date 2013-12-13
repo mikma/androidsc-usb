@@ -73,7 +73,7 @@ JNIEXPORT void JNICALL Java_se_m7n_android_libusb_LibUsb_lsusb(JNIEnv * env, job
 JNIEXPORT void JNICALL Java_se_m7n_android_libusb_LibUsb_pcscmain(JNIEnv * env, jobject obj, jobject callback)
 {
 	int argc = 5;
-	char *argv[] = {strdup("pcscd"), "-f", "-d", "-c", "/dev/null", NULL};
+	char *argv[] = {strdup("pcscd"), "-f", "--info", "-c", "/dev/null", NULL};
 	printf("Before main");
 	__android_log_print(ANDROID_LOG_DEBUG, TAG, "Before pcscd main");
         // Reset getopt
