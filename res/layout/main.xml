@@ -15,6 +15,10 @@
     android:layout_height="wrap_content"
     android:text="@string/initializing"
     />
+<Button android:id="@+id/set_device"
+        android:layout_width="wrap_content" android:layout_height="wrap_content" 
+        android:text="@string/set_device">
+    </Button>
 <Button android:id="@+id/start_scardcontrol"
         android:layout_width="wrap_content" android:layout_height="wrap_content" 
         android:text="@string/start_scardcontrol">

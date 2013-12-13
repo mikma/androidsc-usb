@@ -12,9 +12,12 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+import android.app.PendingIntent;
 import android.app.Service;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.os.Bundle;
 import android.os.Handler;
@@ -35,6 +38,7 @@ import org.openintents.smartcard.PCSCDaemon;
 
 public class LibUsb extends Service {
     public final static String TAG = "LibUsb";
+    private static final String ACTION_USB_PERMISSION = "se.m7n.android.libusb.USB_PERMISSION";
     public static final String INFO_PLIST = "Info.plist";
     public static final String PATH_USB = "usb";
     public static final String PATH_IPC = "ipc";
@@ -59,10 +63,11 @@ public class LibUsb extends Service {
     private boolean mIsStarted;
     private String mSocketName;
     private Handler mHandler;
-    private Object mDevice;
+    private UsbDevice mDevice;
     private PcscproxyThread mPcscproxy;
     private PcscdThread mPcscd;
     private int mRefCount;
+    private UsbManager mUsbManager;
     final private Lock startLock = new ReentrantLock();
     final private Condition startInitialized = startLock.newCondition();
     
@@ -73,6 +78,8 @@ public class LibUsb extends Service {
         UsbHelper.useContext(this);
 
         mRefCount = 0;
+        mUsbManager = (UsbManager) getSystemService(Context.USB_SERVICE);
+
         mCallback = new Callback();
         //setCallback(mCallback);
 
@@ -141,6 +148,8 @@ public class LibUsb extends Service {
                     }
             }
         };
+
+        mUsbReceiver.register();
     }
 
     @Override
@@ -148,6 +157,8 @@ public class LibUsb extends Service {
         super.onDestroy();
 
         Log.d(TAG, "onDestroy");
+
+        mUsbReceiver.unregister();
 
         Log.d(TAG, "proxy stop");
         stopPcscproxy();
@@ -206,13 +217,56 @@ public class LibUsb extends Service {
         }
     }
 
-    void setDevice(Object object, boolean start) {
+    private boolean isCSCID(UsbDevice device) {
+        if (device.getDeviceClass() == UsbConstants.USB_CLASS_CSCID)
+            return true;
+
+        int count = device.getInterfaceCount();
+        for (int i=0; i<count; i++) {
+            UsbInterface iface = device.getInterface(i);
+            if (iface == null) {
+                Log.d(TAG, "isCSCID null interface");
+                continue;
+            }
+
+            Log.d(TAG, "isCSCID iface class:" + iface.getInterfaceClass());
+
+            if (iface.getInterfaceClass() == UsbConstants.USB_CLASS_CSCID) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    void setDevice(UsbDevice object, boolean start) {
         int handler = -1;
 
         Log.d(TAG, "setDevice " + start + ": " + object);
 
         if (start) {
             mDevice = object;
+
+            if (mDevice == null) {
+                HashMap<String, UsbDevice> devList = mUsbManager.getDeviceList();
+
+                Log.d(TAG, "Enumerate devices");
+                for (UsbDevice device: devList.values()) {
+                    Log.d(TAG, "Check device " + device);
+                    if (isCSCID(device)) {
+                        Log.d(TAG, "Device is CSCID");
+                        if (!mUsbManager.hasPermission(device)) {
+                            Log.d(TAG, "Request permission");
+                            requestUsbPermission(device);
+                        }
+                    }
+                }
+            } else {
+                if (!mUsbManager.hasPermission(mDevice)) {
+                    Log.d(TAG, "Request permission");
+                    requestUsbPermission(mDevice);
+                }
+            }
 
             if (mPcscd == null) {
                 handler = HANDLER_ATTACHED;
@@ -291,6 +345,59 @@ public class LibUsb extends Service {
         }
         public boolean isTlsRequired() {
             return false;
+        }
+    }
+
+    private void requestUsbPermission(UsbDevice device) {
+        Intent permIntent = new Intent(ACTION_USB_PERMISSION);
+        permIntent.putExtra(UsbManager.EXTRA_DEVICE, device);
+        PendingIntent pendIntent = PendingIntent.getBroadcast(LibUsb.this, 0, permIntent, 0);
+        mUsbManager.requestPermission(device, pendIntent);
+    }
+
+    private UsbBroadcastReceiver mUsbReceiver = new UsbBroadcastReceiver();
+
+    private class UsbBroadcastReceiver extends BroadcastReceiver {
+        public void register() {
+            IntentFilter filter = new IntentFilter();
+
+            filter.addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED);
+            filter.addAction(UsbManager.ACTION_USB_DEVICE_DETACHED);
+            filter.addAction(ACTION_USB_PERMISSION);
+            registerReceiver(this, filter);
+            Log.d(TAG, "Register usb broadcast " + filter);
+        }
+        public void unregister() {
+            unregisterReceiver(this);
+        }
+
+        public void onReceive(Context context, Intent intent) {
+            String action = intent.getAction();
+            UsbDevice device = (UsbDevice)intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
+
+            Log.d(TAG, "onReceive action:" + action + " intent:" + intent + " dev:" + device);
+
+            if (UsbManager.ACTION_USB_DEVICE_ATTACHED.equals(action)) {
+                if (device != null && isCSCID(device)) {
+                    Log.d(TAG, "onReceive request perm");
+
+                    if (!mUsbManager.hasPermission(device)) {
+                        requestUsbPermission(device);
+                    }
+                }
+            } else if (ACTION_USB_PERMISSION.equals(action)) {
+                boolean granted = intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false);
+
+                if (granted && device != null) {
+                    Log.d(TAG, "onReceive perm:" + device);
+                    // TODO change start to hotplug
+                    setDevice(device, true);
+                }
+            } else if (UsbManager.ACTION_USB_DEVICE_DETACHED.equals(action)) {
+                if (device != null) {
+                    setDevice(null, false);
+                }
+            }
         }
     }
 

@@ -13,4 +13,5 @@
     <string name="stop_pcscd">Stop pcscd</string>
     <string name="stop_pcscproxy">Stop pcsc-proxy</string>
     <string name="attached_name">AttachedActivity</string>
+    <string name="set_device">Set Device</string>
 </resources>

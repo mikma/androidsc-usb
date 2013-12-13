@@ -29,13 +29,10 @@ import org.openintents.smartcard.PCSCDaemon;
 public class LibUsbActivity extends Activity
 {
     private static final String TAG = "LibUsb";
-    private static final String ACTION_USB_PERMISSION = "se.m7n.android.libusb.USB_PERMISSION";
     protected static final int HANDLER_LSUSB = 1;
-    private Object mDevice;
     private TextView mStatus;
     private LibUsb mUsb;
     private Handler mHandler;
-    private boolean mStarted;
     private UsbManager mUsbManager;
 
     /** Called when the activity is first created. */
@@ -50,6 +47,7 @@ public class LibUsbActivity extends Activity
 
         setContentView(R.layout.main);
         mStatus = (TextView)this.findViewById(R.id.status);
+        ((Button)this.findViewById(R.id.set_device)).setOnClickListener(mSetDevice);
         ((Button)this.findViewById(R.id.start_scardcontrol)).setOnClickListener(mStartScardcontrol);
         ((Button)this.findViewById(R.id.start_pcscproxy)).setOnClickListener(mStartPcscProxy);
         ((Button)this.findViewById(R.id.stop_pcscproxy)).setOnClickListener(mStopPcscProxy);
@@ -73,17 +71,22 @@ public class LibUsbActivity extends Activity
                     }
             }
         };
-
-        mUsbReceiver.register();
     }
     
     @Override
     public void onDestroy()
     {
-        mUsbReceiver.unregister();
         unbindService(connection);
         super.onDestroy();
     }
+
+    OnClickListener mSetDevice = new OnClickListener() {
+        public void onClick(View v) {
+            if (mUsb != null) {
+                mUsb.setDevice(findDevice(), true);
+            }
+        }
+    };
 
     OnClickListener mStartScardcontrol = new OnClickListener() {
         public void onClick(View v) {
@@ -123,15 +126,6 @@ public class LibUsbActivity extends Activity
 
         Intent intent = getIntent();
         Log.d(TAG, "intent: " + intent);
-        String action = intent.getAction();
-
-        UsbDevice device = (UsbDevice)intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
-        if (UsbManager.ACTION_USB_DEVICE_ATTACHED.equals(action)) {
-            setDevice(device, true);
-        } else {
-            // Normal start
-            setDevice(null, true);
-        }
     }
     
     @Override
@@ -139,31 +133,13 @@ public class LibUsbActivity extends Activity
         super.onPause();
     }
 
-    private void setDevice(Object object, boolean start) {
-        Log.d(TAG, "setDevice started:" + mStarted + " device:" + object + " start:" + start);
-        mDevice = object;
-        if (!start) {
-            mStatus.setText(R.string.disconnected);
-            mStarted = false;
-        } else if (!mStarted) {
-            mStatus.setText(R.string.connected);
-            mStarted = true;
-        } else /* mStarted */ {
-        }
-
-        if (mUsb != null) {
-            mUsb.setDevice(object, start);
-        }
-    }
-
-    // TODO unused, remove
     private UsbDevice findDevice() {
         HashMap<String, UsbDevice> devList = mUsbManager.getDeviceList();
 
         for (UsbDevice dev : devList.values()) {
             Log.d(TAG, "Dev: " + dev + " " + dev.hashCode() + " " + dev.getVendorId() + " " + dev.getProductId() + " " + dev.getDeviceId() + " " + dev.getDeviceName());
 
-            if (dev.getDeviceClass() == UsbConstants.USB_CLASS_CSCID) {
+            if (isCSCID(dev)) {
                 return dev;
             }
         }
@@ -192,63 +168,17 @@ public class LibUsbActivity extends Activity
         return false;
     }
 
-    private UsbBroadcastReceiver mUsbReceiver = new UsbBroadcastReceiver();
-
-    private class UsbBroadcastReceiver extends BroadcastReceiver {
-        public void register() {
-            IntentFilter filter = new IntentFilter();
-
-            filter.addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED);
-            filter.addAction(UsbManager.ACTION_USB_DEVICE_DETACHED);
-            filter.addAction(ACTION_USB_PERMISSION);
-            registerReceiver(this, filter);
-            Log.d(TAG, "Register usb broadcast " + filter);
-        }
-        public void unregister() {
-            unregisterReceiver(this);
-        }
-
-        public void onReceive(Context context, Intent intent) {
-            String action = intent.getAction();
-            UsbDevice device = (UsbDevice)intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
-
-            Log.d(TAG, "onReceive action:" + action + " intent:" + intent + " dev:" + device);
-
-            if (UsbManager.ACTION_USB_DEVICE_ATTACHED.equals(action)) {
-                if (device != null && isCSCID(device)) {
-                    Log.d(TAG, "onReceive request perm");
-                    Intent permIntent = new Intent(ACTION_USB_PERMISSION);
-                    permIntent.putExtra(UsbManager.EXTRA_DEVICE,
-                                        device);
-                    PendingIntent pendIntent = PendingIntent.getBroadcast(LibUsbActivity.this, 0, permIntent, 0);
-                    mUsbManager.requestPermission(device, pendIntent);
-                }
-            } else if (ACTION_USB_PERMISSION.equals(action)) {
-                if (device != null) {
-                    Log.d(TAG, "onReceive perm:" + device);
-                    // TODO change start to hotplug
-                    setDevice(device, true);
-                }
-            } else if (UsbManager.ACTION_USB_DEVICE_DETACHED.equals(action)) {
-                if (device != null) {
-                    setDevice(null, false);
-                }
-            }
-        }
-    }
-
     private final ServiceConnection connection = new ServiceConnection() {
             public void onServiceConnected(ComponentName className,
                                             IBinder service) {
                 Log.d(TAG, "Bound " + className);
                 LibUsb.PCSCBinder binder = (LibUsb.PCSCBinder)service;
                 mUsb = binder.getService();
-                if (mStarted) {
-                    mUsb.setDevice(mDevice, true);
-                }
+                mStatus.setText(R.string.connected);
             }
             public void onServiceDisconnected(ComponentName className) {
                 mUsb = null;
+                mStatus.setText(R.string.disconnected);
             }
         };
 }
