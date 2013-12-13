@@ -59,7 +59,6 @@ public class LibUsb extends Service {
         System.loadLibrary("scardcontrol");
         System.loadLibrary("usbjni");
     }
-    private Callback mCallback;
     private boolean mIsStarted;
     private String mSocketName;
     private Handler mHandler;
@@ -79,9 +78,6 @@ public class LibUsb extends Service {
 
         mRefCount = 0;
         mUsbManager = (UsbManager) getSystemService(Context.USB_SERVICE);
-
-        mCallback = new Callback();
-        //setCallback(mCallback);
 
         mIsStarted = false;
         mSocketName = toString();
@@ -401,141 +397,12 @@ public class LibUsb extends Service {
         }
     }
 
-    public class Callback {
-        public UsbManager getUsbManager() {
-            return (UsbManager) getSystemService(Context.USB_SERVICE);
-        }
-        public Object[] getDeviceList() {
-            if (mDevice == null)
-                return new Object[0];
-
-            UsbManager manager = getUsbManager();
-            HashMap<String, UsbDevice> devList = manager.getDeviceList();
-
-            if (devList.containsValue(mDevice))
-                return new Object[]{mDevice};
-
-            // USB device detached
-            setDevice(null, false);
-            return new Object[0];
-        }
-        // TODO unused, remove
-        public Object[] getDeviceListX() {
-            Log.d(TAG, "getDeviceList");
-            Log.d(TAG, "getDeviceList0");
-            try {
-                Log.d(TAG, "getDeviceList1");
-                UsbManager manager = getUsbManager();
-                Log.d(TAG, "getDeviceList2");
-                HashMap<String, UsbDevice> devList = manager.getDeviceList();
-                Log.d(TAG, "getDeviceList3");
-                Collection<UsbDevice> devices = devList.values();
-                Log.d(TAG, "getDeviceList4");
-                Object[] list = devices.toArray();
-                Log.d(TAG, "getDeviceList5");
-                // Object[] list = getUsbManager().getDeviceList().values().toArray();
-                for (int i=0;i<list.length;i++) {
-                    UsbDevice dev = (UsbDevice)list[i];
-                    Log.d(TAG, "Dev: " + dev + " " + dev.hashCode() + " " + dev.getVendorId() + " " + dev.getProductId() + " " + dev.getDeviceId() + " " + dev.getDeviceName());
-                }
-                Log.d(TAG, "getDeviceList returns " + list.length);
-                return list;
-            } catch(Exception e) {
-                Log.d(TAG, "exception", e);
-                return null;
-            } catch(Throwable e) {
-                Log.d(TAG, "throwable", e);
-                return null;
-            }
-        }
-
-        public UsbEndpoint findEndpoint(UsbDevice device, int endpoint_addr) {
-            int num_ifaces = device.getInterfaceCount();
-            for (int i=0; i < num_ifaces; i++) {
-                // Get interface
-                UsbInterface iface = device.getInterface(i);
-
-                int num_endpoints = iface.getEndpointCount();
-                for (int j=0; j < num_endpoints; j++) {
-                    UsbEndpoint ep = iface.getEndpoint(j);
-                    int addr = ep.getAddress();
-                    if (endpoint_addr == addr) {
-                        return ep;
-                    }
-                }
-            }
-            Log.w(TAG, "find_endpoint not found: " + endpoint_addr);
-            return null;
-        }
-
-        public boolean submitTransfer(UsbDeviceConnection conn, UsbDevice dev, UsbRequest req, ByteBuffer buffer, int endpoint_addr, int length) {
-            UsbEndpoint ep = findEndpoint(dev, endpoint_addr);
-            if (ep == null) {
-                Log.d(TAG, "submitTransfer ep not found");
-                return false;
-            }
-
-            if (!req.initialize(conn, ep)) {
-                Log.d(TAG, "submitTransfer req init failed");
-                return false;
-            }
-
-            boolean res = req.queue(buffer, length);
-            Log.d(TAG, "submitTransfer res:" + res);
-            return res;
-        }
-
-        public int controlTransfer(UsbDeviceConnection conn, int requestType, int request, int value, int index, byte[] buffer, int length, int timeout) {
-            return conn.controlTransfer(requestType, request, value, index, buffer, length, timeout);
-        }
-        public int bulkTransfer(UsbDeviceConnection conn, UsbEndpoint ep, byte[] data, int length, int timeout) {
-            return conn.bulkTransfer(ep, data, length, timeout);
-        }
-        public int bulkTransferX(UsbDeviceConnection conn, UsbEndpoint ep, byte[] data, int length, int timeout) {
-            UsbRequest req = new UsbRequest();
-            if (!req.initialize(conn, ep)) {
-                Log.e(TAG, "bulkTransfer initialize failed");
-                return -2;
-            }
-            ByteBuffer buffer = ByteBuffer.allocate(length);
-            if (ep.getDirection()==UsbConstants.USB_DIR_OUT) {
-                Log.e(TAG, "bulkTransfer put data " + length);
-                buffer.put(data, 0, length);
-            }
-
-            if (!req.queue(buffer, length)) {
-                Log.e(TAG, "bulkTransfer queue failed");
-                return -3;
-            }
-
-            UsbRequest req2 = conn.requestWait();
-            if (req2 != req) {
-                Log.e(TAG, "bulkTransfer unexpected request");
-                return -4;
-            }
-            int res = buffer.position();
-
-            if (ep.getDirection()==UsbConstants.USB_DIR_IN) {
-                Log.e(TAG, "bulkTransfer got data " + res);
-                buffer.rewind();
-                // TODO compare res and length
-                buffer.get(data, 0, length);
-            }
-
-            req.close();
-            req2.close();
-
-            return res;
-        }
-
-    }
-
     class PcscdThread extends Thread {
         public PcscdThread() {
             super("pcscd");
         }
         public void run() {
-            pcscmain(mCallback);
+            pcscmain();
         }
     }
 
@@ -573,7 +440,7 @@ public class LibUsb extends Service {
         public void run() {
             Message msg = mHandler.obtainMessage(HANDLER_READY);
             mHandler.sendMessageDelayed(msg, 1000);
-            pcscproxymain(mCallback, mSocketName);
+            pcscproxymain(mSocketName);
         }
     }
 
@@ -604,20 +471,11 @@ public class LibUsb extends Service {
         mPcscproxy = null;
     }
 
-    public void scardcontrol() {
-        scardcontrol(mCallback);
-    }
-
-    public void lsusb() {
-        lsusb(mCallback);
-    }
-
-    native private void scardcontrol(Callback callback);
-    native private void lsusb(Callback callback); 
-    native private void pcscmain(Callback callback);
+    native public void scardcontrol();
+    native public void lsusb();
+    native private void pcscmain();
     native private void pcscstop();
-    native public void pcschotplug();
-    native private void pcscproxymain(Callback callback, String mSocketName);
+    native private void pcschotplug();
+    native private void pcscproxymain(String mSocketName);
     native private int pcscproxystop();
-    native private void setCallback(Callback callback); 
 }

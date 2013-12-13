@@ -18,12 +18,12 @@
 
 extern "C" {
 	JNIEXPORT void JNICALL Java_se_m7n_android_libusb_LibUsb_setCallback(JNIEnv * env, jobject obj, jobject callback);
-	JNIEXPORT void JNICALL Java_se_m7n_android_libusb_LibUsb_scardcontrol(JNIEnv * env, jobject obj, jobject callback);
-	JNIEXPORT void JNICALL Java_se_m7n_android_libusb_LibUsb_lsusb(JNIEnv * env, jobject obj, jobject callback);
-	JNIEXPORT void JNICALL Java_se_m7n_android_libusb_LibUsb_pcscmain(JNIEnv * env, jobject obj, jobject callback);
+	JNIEXPORT void JNICALL Java_se_m7n_android_libusb_LibUsb_scardcontrol(JNIEnv * env, jobject obj);
+	JNIEXPORT void JNICALL Java_se_m7n_android_libusb_LibUsb_lsusb(JNIEnv * env, jobject obj);
+	JNIEXPORT void JNICALL Java_se_m7n_android_libusb_LibUsb_pcscmain(JNIEnv * env, jobject obj);
 	JNIEXPORT void JNICALL Java_se_m7n_android_libusb_LibUsb_pcscstop(JNIEnv * env, jobject obj);
 	JNIEXPORT void JNICALL Java_se_m7n_android_libusb_LibUsb_pcschotplug(JNIEnv * env, jobject obj);
-	JNIEXPORT void JNICALL Java_se_m7n_android_libusb_LibUsb_pcscproxymain(JNIEnv * env, jobject obj, jobject callback, jstring socketName);
+	JNIEXPORT void JNICALL Java_se_m7n_android_libusb_LibUsb_pcscproxymain(JNIEnv * env, jobject obj, jstring socketName);
 	JNIEXPORT jint JNICALL Java_se_m7n_android_libusb_LibUsb_pcscproxystop(JNIEnv * env, jobject obj);
 	int main(int argc, char *argv[]);
 
@@ -38,7 +38,7 @@ extern "C" {
 	int pp_stop();
 };
 
-JNIEXPORT void JNICALL Java_se_m7n_android_libusb_LibUsb_scardcontrol(JNIEnv * env, jobject obj, jobject callback)
+JNIEXPORT void JNICALL Java_se_m7n_android_libusb_LibUsb_scardcontrol(JNIEnv * env, jobject obj)
 {
 	int argc = 1;
 	char *argv[] = {"lsusb", NULL};
@@ -54,7 +54,7 @@ JNIEXPORT void JNICALL Java_se_m7n_android_libusb_LibUsb_scardcontrol(JNIEnv * e
 	printf("After lsusb main");
 }
 
-JNIEXPORT void JNICALL Java_se_m7n_android_libusb_LibUsb_lsusb(JNIEnv * env, jobject obj, jobject callback)
+JNIEXPORT void JNICALL Java_se_m7n_android_libusb_LibUsb_lsusb(JNIEnv * env, jobject obj)
 {
 	int argc = 1;
 	char *argv[] = {"lsusb", NULL};
@@ -70,7 +70,7 @@ JNIEXPORT void JNICALL Java_se_m7n_android_libusb_LibUsb_lsusb(JNIEnv * env, job
 	printf("After lsusb main");
 }
 
-JNIEXPORT void JNICALL Java_se_m7n_android_libusb_LibUsb_pcscmain(JNIEnv * env, jobject obj, jobject callback)
+JNIEXPORT void JNICALL Java_se_m7n_android_libusb_LibUsb_pcscmain(JNIEnv * env, jobject obj)
 {
 	int argc = 5;
 	char *argv[] = {strdup("pcscd"), "-f", "--info", "-c", "/dev/null", NULL};
@@ -106,7 +106,7 @@ JNIEXPORT void JNICALL Java_se_m7n_android_libusb_LibUsb_pcschotplug(JNIEnv * en
 	printf("After pcschotplug");
 }
 
-JNIEXPORT void JNICALL Java_se_m7n_android_libusb_LibUsb_pcscproxymain(JNIEnv * env, jobject obj, jobject callback, jstring socketName)
+JNIEXPORT void JNICALL Java_se_m7n_android_libusb_LibUsb_pcscproxymain(JNIEnv * env, jobject obj, jstring socketName)
 {
 	int argc = 6;
         // TODO make writeable copy?

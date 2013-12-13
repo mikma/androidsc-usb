@@ -30,7 +30,7 @@ public class AttachedActivity extends Activity
 {
     private static final String TAG = "Attached";
     private static final String ACTION_USB_PERMISSION = "se.m7n.android.libusb.USB_PERMISSION";
-    private Object mDevice;
+    private UsbDevice mDevice;
     private TextView mStatus;
     private LibUsb mUsb;
     private boolean mStarted;
@@ -85,7 +85,7 @@ public class AttachedActivity extends Activity
         super.onPause();
     }
 
-    private void setDevice(Object object, boolean start) {
+    private void setDevice(UsbDevice object, boolean start) {
         Log.d(TAG, "setDevice started:" + mStarted + " device:" + object + " start:" + start);
         mDevice = object;
         if (!start) {
