@@ -20,6 +20,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.os.Bundle;
+import android.os.FileObserver;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
@@ -44,6 +45,8 @@ public class LibUsb extends Service {
     public static final String PATH_IPC = "ipc";
     public static final String PATH_BUNDLE = "ifd-ccid.bundle";
     public static final String PATH_CONTENTS = "Contents";
+    public static final String FILE_PCSCD_COMM = "pcscd.comm";
+    public static final String FILE_PROXY_PID = "pcscproxy.pid";
     protected static final int HANDLER_ATTACHED  = 1;
     protected static final int HANDLER_DETACHED  = 2;
     protected static final int HANDLER_HOTPLUG   = 3;
@@ -67,6 +70,10 @@ public class LibUsb extends Service {
     private PcscdThread mPcscd;
     private int mRefCount;
     private UsbManager mUsbManager;
+    private File mPathIpc;
+    private File mPathPcscdComm;
+    private File mPathProxyPidFile;
+    private FileObserver mFileObserver;
     final private Lock startLock = new ReentrantLock();
     final private Condition startInitialized = startLock.newCondition();
     
@@ -81,6 +88,10 @@ public class LibUsb extends Service {
 
         mIsStarted = false;
         mSocketName = toString();
+
+        mPathIpc = new File(getFilesDir(), PATH_IPC);
+        mPathPcscdComm = new File (mPathIpc, FILE_PCSCD_COMM);
+        mPathProxyPidFile = new File(mPathIpc, FILE_PROXY_PID);
 
         Log.d(TAG, "onCreate: " + mSocketName);
         // Setenv.setenv("test", "value", 1);
@@ -107,8 +118,6 @@ public class LibUsb extends Service {
                         // TODO protect with mutex?
                         startPcscd();
                         // TODO improve synchronous start of daemons
-                        Message msg2 = mHandler.obtainMessage(HANDLER_PROXY);
-                        mHandler.sendMessageDelayed(msg2, 1000);
                         break;
                     }
                     case HANDLER_PROXY: {
@@ -243,21 +252,7 @@ public class LibUsb extends Service {
         if (start) {
             mDevice = object;
 
-            if (mDevice == null) {
-                HashMap<String, UsbDevice> devList = mUsbManager.getDeviceList();
-
-                Log.d(TAG, "Enumerate devices");
-                for (UsbDevice device: devList.values()) {
-                    Log.d(TAG, "Check device " + device);
-                    if (isCSCID(device)) {
-                        Log.d(TAG, "Device is CSCID");
-                        if (!mUsbManager.hasPermission(device)) {
-                            Log.d(TAG, "Request permission");
-                            requestUsbPermission(device);
-                        }
-                    }
-                }
-            } else {
+            if (mDevice != null) {
                 if (!mUsbManager.hasPermission(mDevice)) {
                     Log.d(TAG, "Request permission");
                     requestUsbPermission(mDevice);
@@ -311,7 +306,7 @@ public class LibUsb extends Service {
         File contentsDir = new File (new File(new File(getFilesDir(), PATH_USB), PATH_BUNDLE), PATH_CONTENTS);
         File infoFile = new File(contentsDir, infoFilename);
         copyAsset(infoFilename, contentsDir);
-        new File(getFilesDir(), PATH_IPC).mkdir();
+        mPathIpc.mkdir();
     }
 
     private final PCSCDaemon.Stub mBinder = new PCSCBinder();
@@ -397,6 +392,26 @@ public class LibUsb extends Service {
         }
     }
 
+    private void watchFile(final File watched, final int message) {
+        if (mFileObserver != null)
+            mFileObserver.stopWatching();
+        String dir = watched.getParentFile().getAbsolutePath();
+        final String file = watched.getName();
+        Log.e(TAG, "watchFile started:" + watched);
+        mFileObserver = new FileObserver(dir,
+                                         FileObserver.CREATE) {
+                public void onEvent(int event, String path) {
+                    Log.e(TAG, "watchFile event:" + event + " path:" + path);
+                    if (file.equals(path)) {
+                        Log.e(TAG, "watchFile trigger:" + message);
+                        Message msg = mHandler.obtainMessage(message);
+                        mHandler.sendMessage(msg);
+                    }
+                }
+            };
+        mFileObserver.startWatching();
+    }
+
     class PcscdThread extends Thread {
         public PcscdThread() {
             super("pcscd");
@@ -411,6 +426,9 @@ public class LibUsb extends Service {
             Log.e(TAG, "pcscd already started");
             return;
         }
+
+        // mPathPcscdComm.delete();
+        watchFile(mPathPcscdComm, HANDLER_PROXY);
 
         mPcscd = new PcscdThread();
         mPcscd.start();
@@ -438,9 +456,7 @@ public class LibUsb extends Service {
             super("pcscproxy");
         }
         public void run() {
-            Message msg = mHandler.obtainMessage(HANDLER_READY);
-            mHandler.sendMessageDelayed(msg, 1000);
-            pcscproxymain(mSocketName);
+            pcscproxymain(mSocketName, mPathProxyPidFile.getAbsolutePath());
         }
     }
 
@@ -449,6 +465,9 @@ public class LibUsb extends Service {
             Log.e(TAG, "pcscproxy already started");
             return;
         }
+
+        mPathProxyPidFile.delete();
+        watchFile(mPathProxyPidFile, HANDLER_READY);
 
         mPcscproxy = new PcscproxyThread();
         mPcscproxy.start();
@@ -476,6 +495,6 @@ public class LibUsb extends Service {
     native private void pcscmain();
     native private void pcscstop();
     native private void pcschotplug();
-    native private void pcscproxymain(String mSocketName);
+    native private void pcscproxymain(String mSocketName, String pidFile);
     native private int pcscproxystop();
 }

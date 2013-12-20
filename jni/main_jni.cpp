@@ -23,7 +23,7 @@ extern "C" {
 	JNIEXPORT void JNICALL Java_se_m7n_android_libusb_LibUsb_pcscmain(JNIEnv * env, jobject obj);
 	JNIEXPORT void JNICALL Java_se_m7n_android_libusb_LibUsb_pcscstop(JNIEnv * env, jobject obj);
 	JNIEXPORT void JNICALL Java_se_m7n_android_libusb_LibUsb_pcschotplug(JNIEnv * env, jobject obj);
-	JNIEXPORT void JNICALL Java_se_m7n_android_libusb_LibUsb_pcscproxymain(JNIEnv * env, jobject obj, jstring socketName);
+	JNIEXPORT void JNICALL Java_se_m7n_android_libusb_LibUsb_pcscproxymain(JNIEnv * env, jobject obj, jstring socketName, jstring pidFile);
 	JNIEXPORT jint JNICALL Java_se_m7n_android_libusb_LibUsb_pcscproxystop(JNIEnv * env, jobject obj);
 	int main(int argc, char *argv[]);
 
@@ -106,18 +106,25 @@ JNIEXPORT void JNICALL Java_se_m7n_android_libusb_LibUsb_pcschotplug(JNIEnv * en
 	printf("After pcschotplug");
 }
 
-JNIEXPORT void JNICALL Java_se_m7n_android_libusb_LibUsb_pcscproxymain(JNIEnv * env, jobject obj, jstring socketName)
+JNIEXPORT void JNICALL Java_se_m7n_android_libusb_LibUsb_pcscproxymain(JNIEnv * env, jobject obj, jstring socketName, jstring pidFile)
 {
-	int argc = 6;
+	int argc = 8;
         // TODO make writeable copy?
 	__android_log_print(ANDROID_LOG_DEBUG, TAG, "Enter pcscproxymain %p", socketName);
         char *utf8Name = (char*)env->GetStringUTFChars(socketName, NULL);
+        char *utf8Pid = (char*)env->GetStringUTFChars(pidFile, NULL);
 
 	// FIXME throw exception
-	if (utf8Name == NULL)
+	if (utf8Name == NULL || utf8Pid == NULL) {
+		if (utf8Name)
+			env->ReleaseStringUTFChars(socketName, utf8Name);
+		if (utf8Pid)
+			env->ReleaseStringUTFChars(pidFile, utf8Pid);
 		return;
+        }
 
-	char *argv[] = {strdup("pcsc-proxy"), "-f", "u", "-b", utf8Name, "-u", NULL};
+
+	char *argv[] = {strdup("pcsc-proxy"), "-f", "u", "-b", utf8Name, "-u", "-i", utf8Pid, NULL};
 
         // Reset getopt
         optind = 1;
