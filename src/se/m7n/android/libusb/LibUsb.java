@@ -353,7 +353,6 @@ public class LibUsb extends Service {
             IntentFilter filter = new IntentFilter();
 
             filter.addAction(UsbManager.ACTION_USB_DEVICE_DETACHED);
-            filter.addAction(ACTION_USB_PERMISSION);
             registerReceiver(this, filter);
             Log.d(TAG, "Register usb broadcast " + filter);
         }
@@ -367,15 +366,7 @@ public class LibUsb extends Service {
 
             Log.d(TAG, "onReceive action:" + action + " intent:" + intent + " dev:" + device);
 
-            if (ACTION_USB_PERMISSION.equals(action)) {
-                boolean granted = intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false);
-
-                if (granted && device != null) {
-                    Log.d(TAG, "onReceive perm:" + device);
-                    // TODO change start to hotplug
-                    setDevice(device, true);
-                }
-            } else if (UsbManager.ACTION_USB_DEVICE_DETACHED.equals(action)) {
+            if (UsbManager.ACTION_USB_DEVICE_DETACHED.equals(action)) {
                 if (device != null) {
                     setDevice(null, false);
                 }
