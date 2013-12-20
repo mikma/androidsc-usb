@@ -54,14 +54,6 @@ public class LibUsbService extends Service {
     protected static final int HANDLER_START     = 5;
     protected static final int HANDLER_READY     = 6;
 
-    static {
-        System.loadLibrary("usb");
-        System.loadLibrary("ccid");
-        System.loadLibrary("pcscd");
-        System.loadLibrary("pcsclite");
-        System.loadLibrary("scardcontrol");
-        System.loadLibrary("usbjni");
-    }
     private boolean mIsStarted;
     private String mSocketName;
     private Handler mHandler;
@@ -74,6 +66,7 @@ public class LibUsbService extends Service {
     private File mPathPcscdComm;
     private File mPathProxyPidFile;
     private FileObserver mFileObserver;
+    private LibUsb mLibUsb;
     final private Lock startLock = new ReentrantLock();
     final private Condition startInitialized = startLock.newCondition();
     
@@ -81,6 +74,7 @@ public class LibUsbService extends Service {
     public void onCreate() {
         super.onCreate();
 
+        mLibUsb = new LibUsb();
         UsbHelper.useContext(this);
 
         mRefCount = 0;
@@ -147,7 +141,7 @@ public class LibUsbService extends Service {
                     }
                     case HANDLER_HOTPLUG: {
                         Log.d(TAG, "pcschotplug");
-                        pcschotplug();
+                        mLibUsb.pcschotplug();
                         break;
                     }
                     }
@@ -399,7 +393,7 @@ public class LibUsbService extends Service {
             super("pcscd");
         }
         public void run() {
-            pcscmain();
+            mLibUsb.pcscmain();
         }
     }
 
@@ -423,7 +417,7 @@ public class LibUsbService extends Service {
         }
 
         Log.i(TAG, "pcscd stopping");
-        pcscstop();
+        mLibUsb.pcscstop();
         try {
             mPcscd.join(5000);
         } catch(InterruptedException e) {
@@ -438,7 +432,7 @@ public class LibUsbService extends Service {
             super("pcscproxy");
         }
         public void run() {
-            pcscproxymain(mSocketName, mPathProxyPidFile.getAbsolutePath());
+            mLibUsb.pcscproxymain(mSocketName, mPathProxyPidFile.getAbsolutePath());
         }
     }
 
@@ -462,7 +456,7 @@ public class LibUsbService extends Service {
         }
 
         Log.i(TAG, "pcscproxy stopping");
-        pcscproxystop();
+        mLibUsb.pcscproxystop();
         try {
             mPcscproxy.join(1000);
         } catch(InterruptedException e) {
@@ -472,11 +466,4 @@ public class LibUsbService extends Service {
         mPcscproxy = null;
     }
 
-    native public void scardcontrol();
-    native public void lsusb();
-    native private void pcscmain();
-    native private void pcscstop();
-    native private void pcschotplug();
-    native private void pcscproxymain(String mSocketName, String pidFile);
-    native private int pcscproxystop();
 }
