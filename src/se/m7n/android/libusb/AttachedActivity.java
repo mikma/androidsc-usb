@@ -23,6 +23,7 @@ import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.Button;
 import android.widget.TextView;
+import android.widget.ProgressBar;
 
 import org.openintents.smartcard.PCSCDaemon;
 
@@ -36,6 +37,7 @@ public class AttachedActivity extends Activity
     private LibUsbService mUsb;
     private boolean mStarted;
     private UsbManager mUsbManager;
+    private ProgressBar mProgress;
 
     /** Called when the activity is first created. */
     @Override
@@ -50,6 +52,8 @@ public class AttachedActivity extends Activity
 
         setContentView(R.layout.attached);
         mStatus = (TextView)this.findViewById(R.id.attached_status);
+        mProgress = (ProgressBar)this.findViewById(R.id.attached_progress);
+
         PackageManager pm = getPackageManager();
         Intent testIntent = mLib.createPcscAttachedIntent();
         ComponentName comp = testIntent.resolveActivity(pm);

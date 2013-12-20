@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">LibUsbActivity</string>
+    <string name="activity_name">LibUsbActivity</string>
     <string name="initializing">Initializing…</string>
     <string name="connected">Connected</string>
     <string name="disconnected">Disconnected</string>
@@ -12,7 +12,10 @@
     <string name="start_pcscd">Start pcscd</string>
     <string name="stop_pcscd">Stop pcscd</string>
     <string name="stop_pcscproxy">Stop pcsc-proxy</string>
-    <string name="attached_name">AttachedActivity</string>
+    <string name="attached_name">Attaching SmartCard reader</string>
     <string name="set_device">Set Device</string>
     <string name="service_name">LibUsb Service</string>
+    <string name="app_name">LibUsb</string>
+    <string name="service_started">LibUsb Started</string>
+    <string name="service_label">LibUsb Service</string>
 </resources>
