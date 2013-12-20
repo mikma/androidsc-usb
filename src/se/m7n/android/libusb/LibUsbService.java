@@ -14,6 +14,7 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import android.app.PendingIntent;
 import android.app.Service;
+import android.content.ActivityNotFoundException;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -128,6 +129,14 @@ public class LibUsbService extends Service {
                             startInitialized.signalAll();
                         } finally {
                             startLock.unlock();
+                        }
+
+                        try {
+                            Intent intent = mLibUsb.createPcscAttachedIntent();
+                            startActivity(intent);
+                        } catch (ActivityNotFoundException e) {
+                            // Should not happen, shutdown
+                            // FIXME shutdown
                         }
                         break;
                     }

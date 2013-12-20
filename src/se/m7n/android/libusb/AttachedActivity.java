@@ -9,6 +9,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
+import android.content.pm.PackageManager;
 import android.hardware.usb.UsbConstants;
 import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbInterface;
@@ -31,6 +32,7 @@ public class AttachedActivity extends Activity
     private static final String ACTION_USB_PERMISSION = "se.m7n.android.libusb.USB_PERMISSION";
     private UsbDevice mDevice;
     private TextView mStatus;
+    private LibUsb mLib;
     private LibUsbService mUsb;
     private boolean mStarted;
     private UsbManager mUsbManager;
@@ -43,10 +45,20 @@ public class AttachedActivity extends Activity
 
         super.onCreate(savedInstanceState);
 
+        mLib = new LibUsb();
         mUsbManager = (UsbManager) getSystemService(Context.USB_SERVICE);
 
         setContentView(R.layout.attached);
         mStatus = (TextView)this.findViewById(R.id.attached_status);
+        PackageManager pm = getPackageManager();
+        Intent testIntent = mLib.createPcscAttachedIntent();
+        ComponentName comp = testIntent.resolveActivity(pm);
+        Log.d(TAG, "onCreate comp:" + comp);
+
+        if (comp == null) {
+            finish();
+            return;
+        }
 
         Intent intent = new Intent(this, LibUsbService.class);
         bindService(intent, connection, BIND_AUTO_CREATE);
@@ -55,7 +67,8 @@ public class AttachedActivity extends Activity
     @Override
     public void onDestroy()
     {
-        unbindService(connection);
+        if (mUsb != null)
+            unbindService(connection);
         super.onDestroy();
     }
 
