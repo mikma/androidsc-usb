@@ -4,7 +4,6 @@ import java.util.HashMap;
 
 import android.app.Activity;
 import android.app.PendingIntent;
-import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -51,14 +50,11 @@ public class AttachedActivity extends Activity
 
         Intent intent = new Intent(this, LibUsbService.class);
         bindService(intent, connection, BIND_AUTO_CREATE);
-
-        mUsbReceiver.register();
     }
 
     @Override
     public void onDestroy()
     {
-        mUsbReceiver.unregister();
         unbindService(connection);
         super.onDestroy();
     }
@@ -122,51 +118,6 @@ public class AttachedActivity extends Activity
         }
 
         return false;
-    }
-
-    private UsbBroadcastReceiver mUsbReceiver = new UsbBroadcastReceiver();
-
-    private class UsbBroadcastReceiver extends BroadcastReceiver {
-        public void register() {
-            IntentFilter filter = new IntentFilter();
-
-            filter.addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED);
-            filter.addAction(UsbManager.ACTION_USB_DEVICE_DETACHED);
-            filter.addAction(ACTION_USB_PERMISSION);
-            registerReceiver(this, filter);
-            Log.d(TAG, "Register usb broadcast " + filter);
-        }
-        public void unregister() {
-            unregisterReceiver(this);
-        }
-
-        public void onReceive(Context context, Intent intent) {
-            String action = intent.getAction();
-            UsbDevice device = (UsbDevice)intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
-
-            Log.d(TAG, "onReceive action:" + action + " intent:" + intent + " dev:" + device);
-
-            if (UsbManager.ACTION_USB_DEVICE_ATTACHED.equals(action)) {
-                if (device != null && isCSCID(device)) {
-                    Log.d(TAG, "onReceive request perm");
-                    Intent permIntent = new Intent(ACTION_USB_PERMISSION);
-                    permIntent.putExtra(UsbManager.EXTRA_DEVICE,
-                                        device);
-                    PendingIntent pendIntent = PendingIntent.getBroadcast(AttachedActivity.this, 0, permIntent, 0);
-                    mUsbManager.requestPermission(device, pendIntent);
-                }
-            } else if (ACTION_USB_PERMISSION.equals(action)) {
-                if (device != null) {
-                    Log.d(TAG, "onReceive perm:" + device);
-                    // TODO change start to hotplug
-                    setDevice(device, true);
-                }
-            } else if (UsbManager.ACTION_USB_DEVICE_DETACHED.equals(action)) {
-                if (device != null) {
-                    setDevice(null, false);
-                }
-            }
-        }
     }
 
     private final ServiceConnection connection = new ServiceConnection() {
