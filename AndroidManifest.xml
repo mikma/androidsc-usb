@@ -32,7 +32,8 @@
              <meta-data android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED"
                 android:resource="@xml/device_filter" />
         </activity>
-        <service android:name="LibUsb"
+        <service android:name="LibUsbService"
+                 android:label="@string/service_name"
                  android:permission="org.openintents.smartcard.permission.ACCESS_PCSC">
           <intent-filter>
             <action android:name="org.openintents.smartcard.BIND_PCSC" />

@@ -32,7 +32,7 @@ public class AttachedActivity extends Activity
     private static final String ACTION_USB_PERMISSION = "se.m7n.android.libusb.USB_PERMISSION";
     private UsbDevice mDevice;
     private TextView mStatus;
-    private LibUsb mUsb;
+    private LibUsbService mUsb;
     private boolean mStarted;
     private UsbManager mUsbManager;
 
@@ -49,7 +49,7 @@ public class AttachedActivity extends Activity
         setContentView(R.layout.attached);
         mStatus = (TextView)this.findViewById(R.id.attached_status);
 
-        Intent intent = new Intent(this, LibUsb.class);
+        Intent intent = new Intent(this, LibUsbService.class);
         bindService(intent, connection, BIND_AUTO_CREATE);
 
         mUsbReceiver.register();
@@ -173,7 +173,8 @@ public class AttachedActivity extends Activity
             public void onServiceConnected(ComponentName className,
                                             IBinder service) {
                 Log.d(TAG, "Bound " + className);
-                LibUsb.PCSCBinder binder = (LibUsb.PCSCBinder)service;
+                LibUsbService.PCSCBinder binder =
+                    (LibUsbService.PCSCBinder)service;
                 mUsb = binder.getService();
                 if (mStarted) {
                     mUsb.setDevice(mDevice, true);

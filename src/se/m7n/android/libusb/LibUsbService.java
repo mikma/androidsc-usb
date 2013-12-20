@@ -37,7 +37,7 @@ import org.libusb.UsbHelper;
 
 import org.openintents.smartcard.PCSCDaemon;
 
-public class LibUsb extends Service {
+public class LibUsbService extends Service {
     public final static String TAG = "LibUsb";
     private static final String ACTION_USB_PERMISSION = "se.m7n.android.libusb.USB_PERMISSION";
     public static final String INFO_PLIST = "Info.plist";
@@ -312,17 +312,17 @@ public class LibUsb extends Service {
     private final PCSCDaemon.Stub mBinder = new PCSCBinder();
 
     final class PCSCBinder extends PCSCDaemon.Stub {
-        public LibUsb getService() {
-            return LibUsb.this;
+        public LibUsbService getService() {
+            return LibUsbService.this;
         }
 
         public boolean start() {
             Log.d(TAG, "start " + String.format("pid:%d uid:%d", getCallingPid(), getCallingUid()));
-            LibUsb.this.start();
+            LibUsbService.this.start();
             return true;
         }
         public void stop() {
-            LibUsb.this.stop();
+            LibUsbService.this.stop();
         }
         public String getLocalSocketAddress() {
             if (!isStarted()) {
@@ -342,7 +342,7 @@ public class LibUsb extends Service {
     private void requestUsbPermission(UsbDevice device) {
         Intent permIntent = new Intent(ACTION_USB_PERMISSION);
         permIntent.putExtra(UsbManager.EXTRA_DEVICE, device);
-        PendingIntent pendIntent = PendingIntent.getBroadcast(LibUsb.this, 0, permIntent, 0);
+        PendingIntent pendIntent = PendingIntent.getBroadcast(LibUsbService.this, 0, permIntent, 0);
         mUsbManager.requestPermission(device, pendIntent);
     }
 
