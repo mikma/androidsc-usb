@@ -31,7 +31,8 @@ public class LibUsbActivity extends Activity
     private static final String TAG = "LibUsb";
     protected static final int HANDLER_LSUSB = 1;
     private TextView mStatus;
-    private LibUsb mUsb;
+    private LibUsb mLib;
+    private LibUsbService mUsb;
     private Handler mHandler;
     private UsbManager mUsbManager;
 
@@ -43,6 +44,7 @@ public class LibUsbActivity extends Activity
 
         super.onCreate(savedInstanceState);
 
+        mLib = new LibUsb();
         mUsbManager = (UsbManager) getSystemService(Context.USB_SERVICE);
 
         setContentView(R.layout.main);
@@ -66,7 +68,7 @@ public class LibUsbActivity extends Activity
             public void handleMessage(Message msg) {
                     switch (msg.what) {
                     case HANDLER_LSUSB:
-                        mUsb.lsusb();
+                        mLib.lsusb();
                         break;
                     }
             }
@@ -90,7 +92,7 @@ public class LibUsbActivity extends Activity
 
     OnClickListener mStartScardcontrol = new OnClickListener() {
         public void onClick(View v) {
-            mUsb.scardcontrol();
+            mLib.scardcontrol();
         }
     };
 
@@ -106,7 +108,7 @@ public class LibUsbActivity extends Activity
     };
     OnClickListener mStartLsusb = new OnClickListener() {
         public void onClick(View v) {
-            mUsb.lsusb();
+            mLib.lsusb();
         }
     };
     OnClickListener mStartPcscd = new OnClickListener() {
@@ -172,7 +174,7 @@ public class LibUsbActivity extends Activity
             public void onServiceConnected(ComponentName className,
                                             IBinder service) {
                 Log.d(TAG, "Bound " + className);
-                LibUsb.PCSCBinder binder = (LibUsb.PCSCBinder)service;
+                LibUsbService.PCSCBinder binder = (LibUsbService.PCSCBinder)service;
                 mUsb = binder.getService();
                 mStatus.setText(R.string.connected);
             }
