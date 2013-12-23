@@ -43,5 +43,9 @@
         android:layout_width="wrap_content" android:layout_height="wrap_content" 
         android:text="@string/stop_pcscd">
     </Button>
+<Button android:id="@+id/stop_service"
+        android:layout_width="wrap_content" android:layout_height="wrap_content" 
+        android:text="@string/stop_service">
+    </Button>
 </LinearLayout>
 

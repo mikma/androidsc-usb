@@ -18,4 +18,5 @@
     <string name="app_name">LibUsb</string>
     <string name="service_started">LibUsb Started</string>
     <string name="service_label">LibUsb Service</string>
+    <string name="stop_service">Stop service</string>
 </resources>
