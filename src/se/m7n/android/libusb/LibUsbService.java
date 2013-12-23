@@ -12,6 +12,7 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+import android.app.Notification;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.ActivityNotFoundException;
@@ -54,6 +55,7 @@ public class LibUsbService extends Service {
     protected static final int HANDLER_PROXY     = 4;
     protected static final int HANDLER_START     = 5;
     protected static final int HANDLER_READY     = 6;
+    private int NOTIFICATION = R.string.service_started;
 
     private boolean mIsStarted;
     private String mSocketName;
@@ -105,6 +107,7 @@ public class LibUsbService extends Service {
                     case HANDLER_ATTACHED:
                     case HANDLER_START: {
                         Log.d(TAG, "pcscd start");
+                        startForeground(NOTIFICATION, createNotification());
                         // TODO protect with mutex?
                         if (mCallback != null)
                             mCallback.progressStart(40);
@@ -154,6 +157,7 @@ public class LibUsbService extends Service {
                         stopPcscproxy();
                         Log.d(TAG, "pcscd stop");
                         stopPcscd();
+                        stopForeground(true);
                         break;
                     }
                     case HANDLER_HOTPLUG: {
@@ -194,6 +198,26 @@ public class LibUsbService extends Service {
     public boolean onUnbind(Intent intent) {
         Log.d(TAG, "onUnbind");
         return true;
+    }
+
+    private Notification createNotification() {
+        CharSequence title = getText(R.string.service_label);
+        CharSequence text = getText(R.string.service_started);
+
+        Notification notification =
+            new Notification(R.drawable.notification, text,
+                             System.currentTimeMillis());
+        notification.flags |= Notification.FLAG_ONGOING_EVENT | Notification.FLAG_FOREGROUND_SERVICE;
+
+        Intent intent = new Intent(this, LibUsbActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP |
+                        Intent.FLAG_ACTIVITY_SINGLE_TOP);
+
+        PendingIntent contentIntent = PendingIntent.getActivity(this, 0,
+                intent, 0);
+
+        notification.setLatestEventInfo(this, title, text, contentIntent);
+        return notification;
     }
 
     private boolean isStarted() {
