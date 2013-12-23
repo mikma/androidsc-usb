@@ -65,7 +65,8 @@ public class AttachedActivity extends Activity
         }
 
         Intent intent = new Intent(this, LibUsbService.class);
-        bindService(intent, connection, BIND_AUTO_CREATE);
+        startService(intent);
+        bindService(intent, connection, 0); //BIND_AUTO_CREATE);
     }
 
     @Override

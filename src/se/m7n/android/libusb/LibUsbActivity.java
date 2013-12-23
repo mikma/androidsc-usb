@@ -60,8 +60,8 @@ public class LibUsbActivity extends Activity
         //mUsb = new LibUsb(this);
         //mUsb.pcscmain();
 
-        Intent intent = new Intent(this, LibUsb.class);
-        bindService(intent, connection, BIND_AUTO_CREATE);
+        Intent intent = createLibUsbServiceIntent();
+        bindService(intent, connection, 0); //BIND_AUTO_CREATE);
         
         mHandler = new Handler(){
             @Override
@@ -133,6 +133,10 @@ public class LibUsbActivity extends Activity
     @Override
     public void onPause() {
         super.onPause();
+    }
+
+    private Intent createLibUsbServiceIntent() {
+        return new Intent(this, LibUsbService.class);
     }
 
     private UsbDevice findDevice() {
