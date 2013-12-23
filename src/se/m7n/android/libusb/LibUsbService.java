@@ -102,13 +102,7 @@ public class LibUsbService extends Service {
             @Override
             public void handleMessage(Message msg) {
                     switch (msg.what) {
-                    case HANDLER_ATTACHED: {
-                        Log.d(TAG, "attached");
-                        // TODO improve synchronous start of daemons
-                        Message msg2 = mHandler.obtainMessage(HANDLER_START);
-                        mHandler.sendMessageDelayed(msg2, 1000);
-                        break;
-                    }
+                    case HANDLER_ATTACHED:
                     case HANDLER_START: {
                         Log.d(TAG, "pcscd start");
                         // TODO protect with mutex?
@@ -290,7 +284,7 @@ public class LibUsbService extends Service {
 
         if (handler >= 0) {
             Message msg = mHandler.obtainMessage(handler);
-            mHandler.sendMessageDelayed(msg, 500);
+            mHandler.sendMessage(msg);
         }
     }
 
