@@ -137,6 +137,20 @@ public class AttachedActivity extends Activity
         return false;
     }
 
+    private final LibUsbService.ServiceCallback mCallback =
+        new LibUsbService.ServiceCallback() {
+            public void progressStart(int max) {
+                mProgress.setMax(max);
+            }
+            public void progressSet(int progress) {
+                mProgress.setProgress(progress);
+            }
+            public void progressStop() {
+                mProgress.setProgress(mProgress.getMax());
+                AttachedActivity.this.finish();
+            }
+        };
+
     private final ServiceConnection connection = new ServiceConnection() {
             public void onServiceConnected(ComponentName className,
                                             IBinder service) {
@@ -144,12 +158,13 @@ public class AttachedActivity extends Activity
                 LibUsbService.PCSCBinder binder =
                     (LibUsbService.PCSCBinder)service;
                 mUsb = binder.getService();
+                mUsb.setCallback(mCallback);
                 if (mStarted) {
                     mUsb.setDevice(mDevice, true);
-                    AttachedActivity.this.finish();
                 }
             }
             public void onServiceDisconnected(ComponentName className) {
+                mUsb.setCallback(null);
                 mUsb = null;
             }
         };

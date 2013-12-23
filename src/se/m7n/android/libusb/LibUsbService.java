@@ -68,6 +68,7 @@ public class LibUsbService extends Service {
     private File mPathProxyPidFile;
     private FileObserver mFileObserver;
     private LibUsb mLibUsb;
+    private ServiceCallback mCallback;
     final private Lock startLock = new ReentrantLock();
     final private Condition startInitialized = startLock.newCondition();
     
@@ -111,13 +112,21 @@ public class LibUsbService extends Service {
                     case HANDLER_START: {
                         Log.d(TAG, "pcscd start");
                         // TODO protect with mutex?
+                        if (mCallback != null)
+                            mCallback.progressStart(40);
                         startPcscd();
+                        if (mCallback != null)
+                            mCallback.progressSet(10);
                         // TODO improve synchronous start of daemons
                         break;
                     }
                     case HANDLER_PROXY: {
                         Log.d(TAG, "proxy start");
+                        if (mCallback != null)
+                            mCallback.progressSet(20);
                         startPcscproxy();
+                        if (mCallback != null)
+                            mCallback.progressSet(30);
                         break;
                     }
                     case HANDLER_READY: {
@@ -129,6 +138,11 @@ public class LibUsbService extends Service {
                             startInitialized.signalAll();
                         } finally {
                             startLock.unlock();
+                        }
+
+                        if (mCallback != null) {
+                            mCallback.progressSet(40);
+                            mCallback.progressStop();
                         }
 
                         try {
@@ -375,6 +389,16 @@ public class LibUsbService extends Service {
                 }
             }
         }
+    }
+
+    interface ServiceCallback {
+        void progressStart(int max);
+        void progressSet(int progress);
+        void progressStop();
+    }
+
+    void setCallback(ServiceCallback callback) {
+        mCallback = callback;
     }
 
     private void watchFile(final File watched, final int message) {
