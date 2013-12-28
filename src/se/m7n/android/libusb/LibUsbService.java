@@ -62,7 +62,7 @@ public class LibUsbService extends Service {
     private Handler mHandler;
     private UsbDevice mDevice;
     private PcscproxyThread mPcscproxy;
-    private PcscdThread mPcscd;
+    private PcscdController mPcscd = new PcscdController();
     private int mRefCount;
     private UsbManager mUsbManager;
     private File mPathIpc;
@@ -111,7 +111,7 @@ public class LibUsbService extends Service {
                         // TODO protect with mutex?
                         if (mCallback != null)
                             mCallback.progressStart(40);
-                        startPcscd();
+                        mPcscd.start();
                         if (mCallback != null)
                             mCallback.progressSet(10);
                         // TODO improve synchronous start of daemons
@@ -156,7 +156,7 @@ public class LibUsbService extends Service {
                         Log.d(TAG, "proxy stop");
                         stopPcscproxy();
                         Log.d(TAG, "pcscd stop");
-                        stopPcscd();
+                        mPcscd.stop();
                         stopForeground(true);
                         break;
                     }
@@ -183,7 +183,7 @@ public class LibUsbService extends Service {
         Log.d(TAG, "proxy stop");
         stopPcscproxy();
         Log.d(TAG, "pcscd stop");
-        stopPcscd();
+        mPcscd.stop();
     }
 
     @Override
@@ -294,13 +294,13 @@ public class LibUsbService extends Service {
                 }
             }
 
-            if (mPcscd == null) {
+            if (!mPcscd.isRunning()) {
                 handler = HANDLER_ATTACHED;
             } else /* mPcscd != null */ {
                 handler = HANDLER_HOTPLUG;
             }
         } else {
-            if (mPcscd != null) {
+            if (mPcscd.isRunning()) {
                 handler = HANDLER_DETACHED;
             }
             mDevice = object;
@@ -439,43 +439,49 @@ public class LibUsbService extends Service {
         mFileObserver.startWatching();
     }
 
-    class PcscdThread extends Thread {
-        public PcscdThread() {
-            super("pcscd");
+    private class PcscdController implements Runnable {
+        private Thread mThread;
+
+        public PcscdController() {
         }
+
+        private boolean isRunning() {
+            return mThread != null;
+        }
+
+        private void start() {
+            if (isRunning()) {
+                Log.e(TAG, "pcscd already started");
+                return;
+            }
+
+            // mPathPcscdComm.delete();
+            watchFile(mPathPcscdComm, HANDLER_PROXY);
+
+            mThread = new Thread(this, "pcscd");
+            mThread.start();
+        }
+
+        private void stop() {
+            if (!isRunning()) {
+                Log.e(TAG, "pcscd already stopped");
+                return;
+            }
+
+            Log.i(TAG, "pcscd stopping");
+            mLibUsb.pcscstop();
+            try {
+                mThread.join(5000);
+            } catch(InterruptedException e) {
+                Log.e(TAG, "pcscd join interrupted", e);
+            }
+            Log.i(TAG, "pcscd stopped");
+            mThread = null;
+        }
+
         public void run() {
             mLibUsb.pcscmain();
         }
-    }
-
-    public void startPcscd() {
-        if (mPcscd != null) {
-            Log.e(TAG, "pcscd already started");
-            return;
-        }
-
-        // mPathPcscdComm.delete();
-        watchFile(mPathPcscdComm, HANDLER_PROXY);
-
-        mPcscd = new PcscdThread();
-        mPcscd.start();
-    }
-
-    public void stopPcscd() {
-        if (mPcscd == null) {
-            Log.e(TAG, "pcscd already stopped");
-            return;
-        }
-
-        Log.i(TAG, "pcscd stopping");
-        mLibUsb.pcscstop();
-        try {
-            mPcscd.join(5000);
-        } catch(InterruptedException e) {
-            Log.e(TAG, "pcscd join interrupted", e);
-        }
-        Log.i(TAG, "pcscd stopped");
-        mPcscd = null;
     }
 
     class PcscproxyThread extends Thread {
