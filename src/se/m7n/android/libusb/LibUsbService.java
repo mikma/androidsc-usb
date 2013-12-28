@@ -451,8 +451,9 @@ public class LibUsbService extends Service {
             return mThread != null;
         }
 
-        protected abstract void preStart();
         protected abstract void doStop();
+        protected abstract File getFileToWatch();
+        protected abstract int getMessageCode();
 
         protected void start() {
             if (isRunning()) {
@@ -460,7 +461,8 @@ public class LibUsbService extends Service {
                 return;
             }
 
-            preStart();
+            getFileToWatch().delete();
+            watchFile(getFileToWatch(), getMessageCode());
 
             mThread = new Thread(this, mName);
             mThread.start();
@@ -491,9 +493,12 @@ public class LibUsbService extends Service {
             super("pcscd");
         }
 
-        protected void preStart() {
-            // mPathPcscdComm.delete();
-            watchFile(mPathPcscdComm, HANDLER_PROXY);
+        protected File getFileToWatch() {
+            return mPathPcscdComm;
+        }
+
+        protected int getMessageCode() {
+            return HANDLER_PROXY;
         }
 
         protected void doStop() {
@@ -511,9 +516,12 @@ public class LibUsbService extends Service {
             super("pcscproxy");
         }
 
-        protected void preStart() {
-            mPathProxyPidFile.delete();
-            watchFile(mPathProxyPidFile, HANDLER_READY);
+        protected File getFileToWatch() {
+            return mPathProxyPidFile;
+        }
+
+        protected int getMessageCode() {
+            return HANDLER_READY;
         }
 
         protected void doStop() {
