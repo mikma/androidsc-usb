@@ -55,6 +55,7 @@ public class LibUsbService extends Service {
     protected static final int HANDLER_PROXY     = 4;
     protected static final int HANDLER_START     = 5;
     protected static final int HANDLER_READY     = 6;
+    protected static final int HANDLER_STOP      = 7;
     private int NOTIFICATION = R.string.service_started;
 
     private boolean mIsStarted;
@@ -158,6 +159,18 @@ public class LibUsbService extends Service {
                         Log.d(TAG, "pcscd stop");
                         mPcscd.stop();
                         stopForeground(true);
+                        mIsStarted = false;
+                        Message stopMsg = mHandler.obtainMessage(HANDLER_STOP);
+                        mHandler.sendMessageDelayed(stopMsg, 5000);
+                        break;
+                    }
+                    case HANDLER_STOP: {
+                        Log.d(TAG, "Received stop");
+                        if (!mIsStarted) {
+                            stopSelf();
+                        } else {
+                            Log.i(TAG, "Ignore stopping");
+                        }
                         break;
                     }
                     case HANDLER_HOTPLUG: {
