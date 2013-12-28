@@ -439,44 +439,65 @@ public class LibUsbService extends Service {
         mFileObserver.startWatching();
     }
 
-    private class PcscdController implements Runnable {
+    private abstract class Controller implements Runnable {
         private Thread mThread;
+        private String mName;
 
-        private PcscdController() {
+        private Controller(String name) {
+            mName = name;
         }
 
-        private boolean isRunning() {
+        protected boolean isRunning() {
             return mThread != null;
         }
 
-        private void start() {
+        protected abstract void preStart();
+        protected abstract void doStop();
+
+        protected void start() {
             if (isRunning()) {
-                Log.e(TAG, "pcscd already started");
+                Log.e(TAG, mName + " already started");
                 return;
             }
 
-            // mPathPcscdComm.delete();
-            watchFile(mPathPcscdComm, HANDLER_PROXY);
+            preStart();
 
-            mThread = new Thread(this, "pcscd");
+            mThread = new Thread(this, mName);
             mThread.start();
         }
 
-        private void stop() {
+        protected void stop() {
             if (!isRunning()) {
-                Log.e(TAG, "pcscd already stopped");
+                Log.e(TAG, mName + " already stopped");
                 return;
             }
 
-            Log.i(TAG, "pcscd stopping");
-            mLibUsb.pcscstop();
+            Log.i(TAG, mName + " stopping");
+            doStop();
             try {
                 mThread.join(5000);
             } catch(InterruptedException e) {
-                Log.e(TAG, "pcscd join interrupted", e);
+                Log.e(TAG, mName + " join interrupted", e);
             }
-            Log.i(TAG, "pcscd stopped");
+            Log.i(TAG, mName + " stopped");
             mThread = null;
+        }
+    }
+
+    private final class PcscdController extends Controller {
+        private Thread mThread;
+
+        private PcscdController() {
+            super("pcscd");
+        }
+
+        protected void preStart() {
+            // mPathPcscdComm.delete();
+            watchFile(mPathPcscdComm, HANDLER_PROXY);
+        }
+
+        protected void doStop() {
+            mLibUsb.pcscstop();
         }
 
         public void run() {
@@ -484,44 +505,19 @@ public class LibUsbService extends Service {
         }
     }
 
-    private class PcscproxyController implements Runnable {
-        private Thread mThread;
+    private final class PcscproxyController extends Controller {
 
         private PcscproxyController() {
+            super("pcscproxy");
         }
 
-        private boolean isRunning() {
-            return mThread != null;
-        }
-
-        private void start() {
-            if (isRunning()) {
-                Log.e(TAG, "pcscproxy already started");
-                return;
-            }
-
+        protected void preStart() {
             mPathProxyPidFile.delete();
             watchFile(mPathProxyPidFile, HANDLER_READY);
-
-            mThread = new Thread(this, "pcscproxy");
-            mThread.start();
         }
 
-        public void stop() {
-            if (!isRunning()) {
-                Log.e(TAG, "pcscproxy already stopped");
-                return;
-            }
-
-            Log.i(TAG, "pcscproxy stopping");
+        protected void doStop() {
             mLibUsb.pcscproxystop();
-            try {
-                mThread.join(1000);
-            } catch(InterruptedException e) {
-                Log.e(TAG, "pcscproxy join interrupted", e);
-            }
-            Log.i(TAG, "pcscproxy stopped");
-            mThread = null;
         }
 
         public void run() {
