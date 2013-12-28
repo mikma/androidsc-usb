@@ -61,7 +61,7 @@ public class LibUsbService extends Service {
     private String mSocketName;
     private Handler mHandler;
     private UsbDevice mDevice;
-    private PcscproxyThread mPcscproxy;
+    private PcscproxyController mPcscproxy = new PcscproxyController();
     private PcscdController mPcscd = new PcscdController();
     private int mRefCount;
     private UsbManager mUsbManager;
@@ -121,7 +121,7 @@ public class LibUsbService extends Service {
                         Log.d(TAG, "proxy start");
                         if (mCallback != null)
                             mCallback.progressSet(20);
-                        startPcscproxy();
+                        mPcscproxy.start();
                         if (mCallback != null)
                             mCallback.progressSet(30);
                         break;
@@ -154,7 +154,7 @@ public class LibUsbService extends Service {
                     case HANDLER_DETACHED: {
                         // TODO protect with mutex?
                         Log.d(TAG, "proxy stop");
-                        stopPcscproxy();
+                        mPcscproxy.stop();
                         Log.d(TAG, "pcscd stop");
                         mPcscd.stop();
                         stopForeground(true);
@@ -181,7 +181,7 @@ public class LibUsbService extends Service {
         mUsbReceiver.unregister();
 
         Log.d(TAG, "proxy stop");
-        stopPcscproxy();
+        mPcscproxy.stop();
         Log.d(TAG, "pcscd stop");
         mPcscd.stop();
     }
@@ -442,7 +442,7 @@ public class LibUsbService extends Service {
     private class PcscdController implements Runnable {
         private Thread mThread;
 
-        public PcscdController() {
+        private PcscdController() {
         }
 
         private boolean isRunning() {
@@ -484,43 +484,48 @@ public class LibUsbService extends Service {
         }
     }
 
-    class PcscproxyThread extends Thread {
-        public PcscproxyThread() {
-            super("pcscproxy");
+    private class PcscproxyController implements Runnable {
+        private Thread mThread;
+
+        private PcscproxyController() {
         }
+
+        private boolean isRunning() {
+            return mThread != null;
+        }
+
+        private void start() {
+            if (isRunning()) {
+                Log.e(TAG, "pcscproxy already started");
+                return;
+            }
+
+            mPathProxyPidFile.delete();
+            watchFile(mPathProxyPidFile, HANDLER_READY);
+
+            mThread = new Thread(this, "pcscproxy");
+            mThread.start();
+        }
+
+        public void stop() {
+            if (!isRunning()) {
+                Log.e(TAG, "pcscproxy already stopped");
+                return;
+            }
+
+            Log.i(TAG, "pcscproxy stopping");
+            mLibUsb.pcscproxystop();
+            try {
+                mThread.join(1000);
+            } catch(InterruptedException e) {
+                Log.e(TAG, "pcscproxy join interrupted", e);
+            }
+            Log.i(TAG, "pcscproxy stopped");
+            mThread = null;
+        }
+
         public void run() {
             mLibUsb.pcscproxymain(mSocketName, mPathProxyPidFile.getAbsolutePath());
         }
     }
-
-    public void startPcscproxy() {
-        if (mPcscproxy != null) {
-            Log.e(TAG, "pcscproxy already started");
-            return;
-        }
-
-        mPathProxyPidFile.delete();
-        watchFile(mPathProxyPidFile, HANDLER_READY);
-
-        mPcscproxy = new PcscproxyThread();
-        mPcscproxy.start();
-    }
-
-    public void stopPcscproxy() {
-        if (mPcscproxy == null) {
-            Log.e(TAG, "pcscproxy already stopped");
-            return;
-        }
-
-        Log.i(TAG, "pcscproxy stopping");
-        mLibUsb.pcscproxystop();
-        try {
-            mPcscproxy.join(1000);
-        } catch(InterruptedException e) {
-            Log.e(TAG, "pcscproxy join interrupted", e);
-        }
-        Log.i(TAG, "pcscproxy stopped");
-        mPcscproxy = null;
-    }
-
 }
