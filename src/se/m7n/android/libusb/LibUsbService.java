@@ -200,6 +200,12 @@ public class LibUsbService extends Service {
     }
 
     @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        Log.d(TAG, "onStartCommand intent:" + (intent==null)?"not null":"null");
+        return START_STICKY;
+    }
+
+    @Override
     public IBinder onBind(Intent intent) {
         // Return the interface
         Log.d(TAG, "onBind intent:" + (intent==null)?"not null":"null");
@@ -210,7 +216,10 @@ public class LibUsbService extends Service {
     @Override
     public boolean onUnbind(Intent intent) {
         Log.d(TAG, "onUnbind");
-        return true;
+        // Return true if you would like to have the service's
+        // onRebind(Intent) method later called when new clients bind
+        // to it.
+        return false;
     }
 
     private Notification createNotification() {
