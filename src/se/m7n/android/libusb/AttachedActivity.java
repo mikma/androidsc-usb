@@ -153,9 +153,9 @@ public class AttachedActivity extends Activity
         };
 
     private final ServiceConnection connection = new ServiceConnection() {
-            public void onServiceConnected(ComponentName className,
+            public void onServiceConnected(ComponentName name,
                                             IBinder service) {
-                Log.d(TAG, "Bound " + className);
+                Log.d(TAG, "onServiceConnected " + name);
                 LibUsbService.PCSCBinder binder =
                     (LibUsbService.PCSCBinder)service;
                 mUsb = binder.getService();
@@ -164,7 +164,8 @@ public class AttachedActivity extends Activity
                     mUsb.setDevice(mDevice, true);
                 }
             }
-            public void onServiceDisconnected(ComponentName className) {
+            public void onServiceDisconnected(ComponentName name) {
+                Log.d(TAG, "onServiceDisconnected " + name);
                 mUsb.setCallback(null);
                 mUsb = null;
             }

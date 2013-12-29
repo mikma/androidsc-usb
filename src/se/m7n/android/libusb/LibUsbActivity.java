@@ -28,7 +28,7 @@ import org.openintents.smartcard.PCSCDaemon;
 
 public class LibUsbActivity extends Activity
 {
-    private static final String TAG = "LibUsb";
+    private static final String TAG = "LibUsbAct";
     protected static final int HANDLER_LSUSB = 1;
     private TextView mStatus;
     private LibUsb mLib;

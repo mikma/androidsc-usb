@@ -201,14 +201,14 @@ public class LibUsbService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        Log.d(TAG, "onStartCommand intent:" + (intent==null)?"not null":"null");
+        Log.d(TAG, "onStartCommand intent:" + ((intent==null)?"not null":"null"));
         return START_STICKY;
     }
 
     @Override
     public IBinder onBind(Intent intent) {
         // Return the interface
-        Log.d(TAG, "onBind intent:" + (intent==null)?"not null":"null");
+        Log.d(TAG, "onBind intent:" + ((intent==null)?"not null":"null"));
 
         return mBinder;
     }
@@ -479,7 +479,7 @@ public class LibUsbService extends Service {
 
         protected void start() {
             if (isRunning()) {
-                Log.e(TAG, mName + " already started");
+                Log.d(TAG, mName + " already started");
                 return;
             }
 
