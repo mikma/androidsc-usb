@@ -40,7 +40,7 @@ import org.libusb.UsbHelper;
 import org.openintents.smartcard.PCSCDaemon;
 
 public class LibUsbService extends Service {
-    public final static String TAG = "LibUsb";
+    public final static String TAG = "LibUsbSvc";
     private static final String ACTION_USB_PERMISSION = "se.m7n.android.libusb.USB_PERMISSION";
     public static final String INFO_PLIST = "Info.plist";
     public static final String PATH_USB = "usb";
@@ -92,7 +92,7 @@ public class LibUsbService extends Service {
         mPathPcscdComm = new File (mPathIpc, FILE_PCSCD_COMM);
         mPathProxyPidFile = new File(mPathIpc, FILE_PROXY_PID);
 
-        Log.d(TAG, "onCreate: " + mSocketName);
+        Log.d(TAG, "onCreate socketName:" + mSocketName);
         // Setenv.setenv("test", "value", 1);
 
         try {
@@ -202,7 +202,7 @@ public class LibUsbService extends Service {
     @Override
     public IBinder onBind(Intent intent) {
         // Return the interface
-        Log.d(TAG, "onBind");
+        Log.d(TAG, "onBind intent:" + (intent==null)?"not null":"null");
 
         return mBinder;
     }
@@ -437,13 +437,13 @@ public class LibUsbService extends Service {
             mFileObserver.stopWatching();
         String dir = watched.getParentFile().getAbsolutePath();
         final String file = watched.getName();
-        Log.e(TAG, "watchFile started:" + watched);
+        Log.d(TAG, "watchFile started:" + watched);
         mFileObserver = new FileObserver(dir,
                                          FileObserver.CREATE) {
                 public void onEvent(int event, String path) {
-                    Log.e(TAG, "watchFile event:" + event + " path:" + path);
+                    Log.d(TAG, "watchFile event:" + event + " path:" + path);
                     if (file.equals(path)) {
-                        Log.e(TAG, "watchFile trigger:" + message);
+                        Log.d(TAG, "watchFile trigger:" + message);
                         Message msg = mHandler.obtainMessage(message);
                         mHandler.sendMessage(msg);
                     }
