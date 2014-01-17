@@ -99,12 +99,12 @@ public class LibUsbActivity extends Activity
 
     OnClickListener mStartPcscProxy = new OnClickListener() {
         public void onClick(View v) {
-            mUsb.startPcscproxy();
+            // mUsb.startPcscproxy();
         }
     };
     OnClickListener mStopPcscProxy = new OnClickListener() {
         public void onClick(View v) {
-            mUsb.stopPcscproxy();
+            // mUsb.stopPcscproxy();
         }
     };
     OnClickListener mStartLsusb = new OnClickListener() {
@@ -114,12 +114,12 @@ public class LibUsbActivity extends Activity
     };
     OnClickListener mStartPcscd = new OnClickListener() {
         public void onClick(View v) {
-            mUsb.startPcscd();
+            // mUsb.startPcscd();
         }
     };
     OnClickListener mStopPcscd = new OnClickListener() {
         public void onClick(View v) {
-            mUsb.stopPcscd();
+            // mUsb.stopPcscd();
         }
     };
     OnClickListener mStopService = new OnClickListener() {
