@@ -3,6 +3,8 @@ jni/pcsc-lite.bak/
 jni/pcsc-proxy.bak/
 
 assets/Info.plist
+build.xml
+local.properties
 
 bin/
 gen/
