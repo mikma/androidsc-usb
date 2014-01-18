@@ -15,7 +15,7 @@
     <string name="attached_name">Attaching SmartCard reader</string>
     <string name="set_device">Set Device</string>
     <string name="service_name">LibUsb Service</string>
-    <string name="app_name">LibUsb</string>
+    <string name="app_name">PC/SC Lite</string>
     <string name="service_started">LibUsb Started</string>
     <string name="service_label">LibUsb Service</string>
     <string name="stop_service">Stop service</string>
