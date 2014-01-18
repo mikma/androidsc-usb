@@ -25,7 +25,8 @@
         </activity>
         <activity android:name="AttachedActivity"
                   android:label="@string/attached_name"
-                  android:theme="@android:style/Theme.Dialog">
+                  android:theme="@android:style/Theme.Dialog"
+                  android:noHistory="true">
             <intent-filter>
                 <action android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED" />
             </intent-filter>
