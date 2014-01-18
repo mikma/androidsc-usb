@@ -62,7 +62,7 @@ public class LibUsbActivity extends Activity
         //mUsb.pcscmain();
 
         Intent intent = createLibUsbServiceIntent();
-        bindService(intent, connection, 0); //BIND_AUTO_CREATE);
+        bindService(intent, connection, BIND_AUTO_CREATE);
         
         mHandler = new Handler(){
             @Override
